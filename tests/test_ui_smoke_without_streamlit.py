@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 APP=Path(__file__).resolve().parents[1]/'app.py'
-PAGES=['Guided Operations Demo','Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
+PAGES=['Platform Overview','Guided Operations Demo','Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
 
 class _Context:
  def metric(self,*args,**kwargs):pass
@@ -51,7 +51,7 @@ class MockStreamlit(ModuleType):
   if label=='Replay mode' and getattr(self,'inspect_legacy',False):return options[1]
   return options[0]
  def selectbox(self,label,options,**kwargs):
-  if label=='Scenario':return self.session_state['selected_scenario']
+  if label in {'Scenario','Select scenario ▾'}:return self.session_state['selected_scenario']
   return options[kwargs.get('index',0)]
  def select_slider(self,label,options,**kwargs):return kwargs.get('value',options[0])
  def slider(self,label,**kwargs):return kwargs.get('value',0)
@@ -135,11 +135,11 @@ def test_guided_demo_progressively_reveals_sp01_model_and_telemetry(monkeypatch)
   runpy.run_path(str(APP),run_name='__main__')
   return '\n'.join(messages)
  first=page_at(0)
- assert 'Awaiting SP01' in first
+ assert 'Awaiting Localisation Agent' in first
  assert '85.2%' not in first
  at_ml=page_at(ml_idx)
  assert '85.2%' in at_ml
- assert 'Awaiting SP01' in at_ml
+ assert 'Awaiting Localisation Agent' in at_ml
  at_scope=page_at(scope_idx)
  assert '91.4%' in at_scope
  at_telemetry=page_at(network_idx)

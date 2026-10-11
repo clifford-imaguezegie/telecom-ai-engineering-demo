@@ -1,6 +1,6 @@
 # Telecom AI Engineering — M05_06D Recorded Investigation Replay
 
-**Release:** V1.3 Visitor Experience & Measured Investigations (recorded offline replay) — October 2026  
+**Release:** V1.3.1 Visitor Experience Hotfix (recorded offline replay) — October 2026  
 **Source project:** `module_5_telecom_ai`, Module 5, M05_06D  
 **Scope:** Nine recorded end-to-end 5G RAN accessibility investigations on **synthetic** network scenarios.
 
@@ -8,21 +8,33 @@
 
 An interactive **Streamlit evidence-grounded replay** of nine executions that have already completed. The application never performs new model inference, agent execution, telemetry retrieval, LangSmith requests, or paid API calls. It uses 126 frozen evidence records extracted from nine selected LangSmith JSON exports, plus the saved investigation-stage outputs and run timelines.
 
-Seven sections:
+Eight sections:
 
-1. **Guided Operations Demo** — narrated health assessment → separate incident investigation with playback controls, dual ML/telemetry reveal, incident routing, accurate original runtime indicators, and agent-level evidence drill-down.
-2. **Network Overview** — recorded network topology, scenario-level KPI trends, portfolio of cases, and selected-case Curated Telecom Knowledge Base query.
-3. **Scenario Library** — select a completed investigation and see its recorded scope, fault family, and outcome.
-4. **Agentic Replay** — step through saved SP01 localization, specialist analyses, supervisor correlation and final report, including the Supervisor’s explicit RAG contribution record. The local SP02–SP07 branch ran in parallel, but its saved outputs are presented sequentially for easier review.
-5. **Root Cause Analysis** — preserved supervisor finding, supporting evidence, alternatives, residual uncertainty, recommendations, and the knowledge-informed query → mechanism → hypothesis → discriminating-observation reasoning chain.
-6. **Engineering Evidence** — inspect 15-minute formal accessibility KPIs, affected-cell series, and recorded operational tool measurements with source evidence identifiers.
-7. **Evaluation & Performance** — recorded trace duration, individual run-node timings, trace provenance, and saved post-run evaluation for the matching execution, separated from operational evidence.
-
+1. **Platform Overview** — the visitor landing page explains the network problem, three measured milestones and the full conceptual architecture: localisation agent → dual ML/dual telemetry → evidence assessment → specialists or healthy route → RAG-supported Supervisor → RCA. Start the animation with the prominently labelled button.
+2. **Guided Operations Demo** — narrated health assessment → separate incident investigation with playback controls, dual ML/telemetry reveal, incident routing, accurate original runtime indicators, and agent-level evidence drill-down.
+3. **Network Overview** — recorded network topology, scenario-level KPI trends, portfolio of cases, and selected-case Curated Telecom Knowledge Base query.
+4. **Scenario Library** — select a completed investigation and see its recorded scope, fault family, and outcome.
+5. **Agentic Replay** — step through saved SP01 localization, specialist analyses, supervisor correlation and final report, including the Supervisor’s explicit RAG contribution record. The local SP02–SP07 branch ran in parallel, but its saved outputs are presented sequentially for easier review.
+6. **Root Cause Analysis** — preserved supervisor finding, supporting evidence, alternatives, residual uncertainty, recommendations, and the knowledge-informed query → mechanism → hypothesis → discriminating-observation reasoning chain.
+7. **Engineering Evidence** — inspect 15-minute formal accessibility KPIs, affected-cell series, and recorded operational tool measurements with source evidence identifiers.
+8. **Evaluation & Performance** — recorded trace duration, individual run-node timings, trace provenance, and saved post-run evaluation for the matching execution, separated from operational evidence.
 The network observed in each scenario is an **independent synthetic snapshot**; data from different case dates should **not** be interpreted as one continuous network trend.
+
+## V1.3.1 — Visitor Onboarding and UI Reliability Fixes
+
+This hotfix addresses user acceptance findings from the hosted V1.3 application without changing the recorded data or investigation results:
+
+- **Scenario selector contrast:** replaces the global white-text rule that made the sidebar scenario selection invisible on a pale control; the selected value and dropdown chevron are now styled with a strong contrasting background and border. The selector is explicitly labelled **Select scenario ▾**.
+- **Dedicated, visible Platform Overview landing page:** introduces the business purpose, 9/9 and 8/8 recorded experimental results, and a readable architecture that begins with the Network Health & Localisation Agent invoking the two ML and two telemetry services. It explains incident/healthy routing, parallel specialists, the Curated Telecom Knowledge Base and RCA Supervisor. A prominent button starts the animation.
+- **Playback visibility:** the Guided Operations Demo keeps the brief introduction and outcome headlines but links back to the detailed architecture page; this avoids pushing the animation far below the fold.
+- **Duplicate widget prevention:** removes a duplicate engineer drill-down block that rendered the same keyed Streamlit selectors twice and could raise a duplicate-key runtime exception.
+- **Visitor-friendly agent labels:** the main playback and routing diagram now display meaningful role names rather than raw `SP01`–`SP08` codes. Original IDs remain accessible in technical evidence and trace provenance for engineering users.
+
+**Verification:** 142 local automated checks passed, including a regression test enforcing exactly one drill-down render call. The environment has not performed real browser QA; verify the hosted app after redeployment.
 
 ## V1.3 — Visitor Experience, Agent Presentation & Measured Outcomes
 
-**The landing page now explains the system before playback.** A short description, four-stage conceptual architecture and three trace-verified investigation-performance headlines introduce the solution. The architecture correctly shows the **Network Health & Localisation Agent (SP01) invoking two ML predictions and the Network Overview / Event telemetry tools**. ML is supporting probabilistic evidence, not an independent autonomous monitoring agent.
+**The dedicated Platform Overview landing page now explains the system before playback.** A short description, four-stage conceptual architecture and three trace-verified investigation-performance headlines introduce the solution. The architecture correctly shows the **Network Health & Localisation Agent (SP01) invoking two ML predictions and the Network Overview / Event telemetry tools**. ML is supporting probabilistic evidence, not an independent autonomous monitoring agent.
 
 | Demonstrated milestone | Based on the included original runs | Boundary |
 |---|---:|---|
@@ -49,7 +61,7 @@ The demonstration is still fully offline. It performs **no** new ML inference, L
 ```powershell
 git add .
 git status
-git commit -m "Enhance Telecom AI demo visitor experience V1.3"
+git commit -m "Fix scenario selector, architecture intro and replay drill-down"
 git push origin main
 ```
 
@@ -74,7 +86,7 @@ streamlit run app.py
 
 Open the local URL shown by Streamlit, normally `http://localhost:8501`. No secrets configuration is required. The demonstration displays **completed** runs; it never reruns the costly notebooks. On Windows, you may alternatively run `./run_windows.ps1` from PowerShell to set up the venv and launch the app. On Linux/macOS, use `./run_unix.sh`.
 
-**Note:** Streamlit is not installed in the packaging environment. The Python/data contract and Streamlit-stub tests passed, but actual interactive browser acceptance testing has not been run here. After deployment, verify animation pacing, panel visibility, the Scenario Library selector and agent drill-down on your target screen size.
+**Note:** A browser acceptance pass on your deployed Streamlit app is still necessary. The Python/data contract and Streamlit-stub tests passed, but actual interactive browser acceptance testing has not been run here. After deployment, verify animation pacing, panel visibility, the Scenario Library selector and agent drill-down on your target screen size.
 
 ## Source selection and corrections
 

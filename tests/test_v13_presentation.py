@@ -69,7 +69,7 @@ def test_workflow_uses_readable_roles_and_keeps_ids():
     story=build_story(case,evidence)
     svg=workflow_svg(case['route_family'],story,4)
     for text in ['Network Health','Accessibility KPI','Cell &amp; Peer','Radio Analysis',
-                 'Processing','Transport','Configuration','RCA Supervisor','SP01','SP07']:
+                 'Processing','Transport','Configuration','RCA Supervisor','ML + telemetry','Config evidence']:
         assert text in svg
 
 
@@ -78,12 +78,13 @@ def test_intro_and_close_show_on_landing_page(monkeypatch):
     displayed=[]
     stub.markdown=lambda val,*a,**k:displayed.append(str(val))
     stub.caption=lambda val,*a,**k:displayed.append(str(val))
+    stub.subheader=lambda val,*a,**k:displayed.append(str(val))
     monkeypatch.setitem(sys.modules,'streamlit',stub)
     runpy.run_path(str(APP),run_name='__main__')
     text='\n'.join(displayed)
     for phrase in ['What is this?', 'Demonstrated investigation milestones',
                    '9/9 recorded scenarios','8/8 incident scenarios',
-                   'How the architecture works','Network Health &amp; Localisation Agent',
+                   'The full solution architecture and design explanation are on **Platform Overview**',
                    'From network data to actionable engineering intelligence',
                    'not production SLAs']:
         assert phrase in text
@@ -116,3 +117,38 @@ def test_rca_page_shows_agent_execution_and_inference(monkeypatch):
     assert any('execution time & tools' in s for s in sections if isinstance(s,str))
     frames=[x for x in sections if not isinstance(x,str) and hasattr(x,'columns')]
     assert any('LLM inference (spans)' in list(f.columns) and 'Tools used' in list(f.columns) for f in frames)
+
+
+def test_platform_overview_is_a_real_start_page(monkeypatch):
+    stub=MockStreamlit('Platform Overview','M05I0003')
+    messages=[]
+    stub.markdown=lambda val,*a,**kw:messages.append(str(val))
+    stub.subheader=lambda val,*a,**kw:messages.append(str(val))
+    monkeypatch.setitem(sys.modules,'streamlit',stub)
+    runpy.run_path(str(APP),run_name='__main__')
+    page='\n'.join(messages)
+    assert 'Solution Architecture — How the Investigation Works' in page
+    for required in ['Network Health &amp; Localisation Agent',
+                     'ML prediction: Fault family','ML prediction: Fault scope',
+                     'Network Overview Telemetry','Network Event Telemetry',
+                     'RCA Supervisor &amp; Evidence Synthesis',
+                     'Curated Telecom Knowledge Base',
+                     'Evidence-Grounded Root Cause Analysis']:
+        assert required in page
+
+
+def test_guided_playback_has_one_agent_drilldown_call():
+    import ast
+    tree=ast.parse(APP.read_text('utf-8'))
+    player=next(node for node in tree.body if isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)) and node.name=='guided_operations_player')
+    calls=[n for n in ast.walk(player) if isinstance(n,ast.Call) and isinstance(n.func,ast.Name) and n.func.id=='guided_agent_drilldown']
+    assert len(calls)==1, 'Duplicate drill-down widgets can crash Streamlit with repeated keys'
+
+
+def test_scenario_dropdown_is_high_contrast_and_preselected():
+    source=APP.read_text('utf-8')
+    assert '[data-testid="stSidebar"] *{color:#eef4fa}' not in source
+    assert '[data-baseweb="select"] > div' in source
+    assert 'border:2px solid #80cbd0' in source
+    assert "'Select scenario ▾'" in source
+    assert "st.session_state['selected_scenario']='M05I0003'" in source

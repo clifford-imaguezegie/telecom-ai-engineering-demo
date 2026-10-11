@@ -5,6 +5,7 @@ RAG/LLMs, MCP telemetry, or any external service. It reads only bundled gzip.
 """
 import gzip
 import json
+import re
 import time
 from storyboard import AGENT_ROLES, build_story, workflow_svg, evidence_preview
 from operational_demo import (guided_sequence, get_run_durations, event_trace_offset,
@@ -24,13 +25,22 @@ except ImportError:
 
 BASE = Path(__file__).resolve().parent
 DATA = BASE / 'data'
-PAGES = ['Guided Operations Demo','Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
+PAGES = ['Platform Overview','Guided Operations Demo','Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
 
 st.set_page_config(page_title='Telecom AI | Guided Operations & RCA',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
 st.markdown('''<style>
 .block-container {padding-top:1.5rem;padding-bottom:3rem;max-width:1500px}
 [data-testid="stSidebar"]{background:#101e30}
-[data-testid="stSidebar"] *{color:#eef4fa}
+/* Sidebar labels are light, but SELECT BOX text/icons must contrast with its background. */
+[data-testid="stSidebar"]{color:#edf7fb}
+[data-testid="stSidebar"] :is(h1,h2,h3,p,label){color:#edf7fb}
+[data-testid="stSidebar"] [data-baseweb="select"] > div{
+  background:#173c51!important;border:2px solid #80cbd0!important;box-shadow:0 0 0 1px rgba(128,203,208,.15)!important
+}
+[data-testid="stSidebar"] [data-baseweb="select"] :is(div,span,input){color:#ffffff!important;-webkit-text-fill-color:#ffffff!important}
+[data-testid="stSidebar"] [data-baseweb="select"] svg{fill:#ffffff!important;color:#ffffff!important}
+[data-testid="stSidebar"] [data-baseweb="select"] [role="button"]{color:#ffffff!important}
+[data-testid="stSidebar"] [data-baseweb="select"]:focus-within > div{outline:2px solid #73cdd1;outline-offset:1px}
 h1,h2,h3{letter-spacing:-.025em}
 .hero{padding:1.4rem 1.7rem;border-radius:14px;border:1px solid #28435e;background:linear-gradient(118deg,#10283d 10%,#153d51 100%);color:#f6f9fc;margin-bottom:1.1rem}
 .hero .eyebrow{font-size:.77rem;letter-spacing:.17em;color:#96bed0;text-transform:uppercase;font-weight:700}
@@ -230,10 +240,19 @@ def load_storyboard(sid):
  c = load_case(sid)
  return build_story(c,lambda eid:load_evidence(sid,eid))
 
+def friendly_replay_text(value):
+ """Translate source-only trace IDs in the public theatre, not the saved evidence."""
+ text=str(value or '')
+ aliases={'SP01':'Localisation Agent','SP02':'KPI Agent','SP03':'Cell & Peer Agent',
+          'SP04':'Radio Agent','SP05':'Processing Agent','SP06':'Transport Agent',
+          'SP07':'Configuration Agent','SP08':'CU-Domain Agent'}
+ return re.sub(r'\bSP0[1-8]\b',lambda match:aliases[match.group(0)],text)
+
+
 def compact_beat_content(beat):
  """Short, synchronised theatre messages; complete raw text remains in detail expander."""
  def card(kind,label,text,limit=320):
-  value=' '.join(str(text or 'No separate field recorded for this stage.').split())
+  value=' '.join(friendly_replay_text(text or 'No separate field recorded for this stage.').split())
   short=value if len(value)<=limit else value[:limit-1].rstrip()+'…'
   return f'<div class="ops-compact {kind}"><div class="tag">{escape(label)}</div><div class="desc">{escape(short)}</div></div>'
  return (card('input','Incoming evidence / handover',beat.get('input')),
@@ -241,7 +260,38 @@ def compact_beat_content(beat):
          card('output','Recorded output / feedback',beat.get('output'),450))
 
 
-def render_solution_intro(cases):
+def architecture_diagram():
+    """Reader-friendly architecture, with SP01 as initiator of BOTH ML calls and telemetry.
+
+    Trace identifiers deliberately stay in technical drill-down and provenance only.
+    """
+    st.subheader('Solution Architecture — How the Investigation Works')
+    st.caption('A conceptual overview. The animated graph in the demo follows each real recorded execution route.')
+    st.markdown("""<div style="border:1px solid #d1e1e9;border-radius:14px;padding:18px;background:#f3f8fb;color:#163449">
+<div style="max-width:710px;margin:auto;text-align:center;padding:12px;border-radius:11px;background:#13344a;color:#f8ffff"><strong>1. Network Health &amp; Localisation Agent</strong><div style="color:#c7dfe8;font-size:.84rem;margin-top:5px">Initiates assessment · invokes intelligence tools · interprets evidence · determines routing</div></div>
+<div style="text-align:center;color:#36627b;font-size:1.4rem;line-height:1.5">↓ requests ↓</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-width:850px;margin:auto">
+<div style="padding:11px;background:#e0effb;border:1px solid #a9cee1;border-radius:9px"><strong>ML prediction: Fault family</strong><div style="font-size:.82rem">What could be wrong?</div></div>
+<div style="padding:11px;background:#e0effb;border:1px solid #a9cee1;border-radius:9px"><strong>ML prediction: Fault scope</strong><div style="font-size:.82rem">Where is the fault likely located?</div></div>
+<div style="padding:11px;background:#e4f4f0;border:1px solid #b8dbd2;border-radius:9px"><strong>Network Overview Telemetry</strong><div style="font-size:.82rem">Measured KPIs and network performance</div></div>
+<div style="padding:11px;background:#e4f4f0;border:1px solid #b8dbd2;border-radius:9px"><strong>Network Event Telemetry</strong><div style="font-size:.82rem">Recorded events and operational context</div></div>
+</div>
+<div style="text-align:center;color:#36627b;font-size:1.4rem;line-height:1.5">↓ evidence returns to the localisation agent ↓</div>
+<div style="max-width:710px;margin:auto;text-align:center;padding:11px;border-radius:10px;background:#174b62;color:#fff"><strong>2. Assessment, Fault Localisation &amp; Routing</strong><div style="font-size:.82rem;color:#ddf4fa">Evaluate incident materiality and affected site, cell or CU domain</div></div>
+<div style="text-align:center;color:#36627b;font-size:1.4rem;line-height:1.5">↓ conditional investigation route ↓</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-width:850px;margin:auto">
+<div style="padding:11px;border-radius:9px;background:#e4f4ed;border:1px solid #9ccab4"><strong>Healthy network</strong><div style="font-size:.82rem">Direct Supervisor review; no specialist escalation</div></div>
+<div style="padding:11px;border-radius:9px;background:#fef2df;border:1px solid #e8c68d"><strong>Material incident</strong><div style="font-size:.82rem">Relevant parallel specialist agents or CU-domain specialist inspect telemetry, tools and competing causes</div></div>
+</div>
+<div style="text-align:center;color:#36627b;font-size:1.4rem;line-height:1.5">↓ investigation evidence ↓</div>
+<div style="max-width:710px;margin:auto;text-align:center;padding:11px;border-radius:10px;background:#173d53;color:#f4fcff"><strong>3. RCA Supervisor &amp; Evidence Synthesis</strong><div style="font-size:.82rem;color:#d3eaf0">Correlates agent results; uses Curated Telecom Knowledge Base when needed to assess fault mechanisms and hypotheses</div></div>
+<div style="text-align:center;color:#36627b;font-size:1.4rem;line-height:1.5">↓</div>
+<div style="max-width:710px;margin:auto;text-align:center;padding:12px;border-radius:10px;background:#0f6159;color:#fff"><strong>4. Evidence-Grounded Root Cause Analysis</strong><div style="font-size:.82rem;color:#e1f8f4">Supported diagnosis · affected network scope · causal reasoning · uncertainties · recorded execution time</div></div>
+</div>""",unsafe_allow_html=True)
+    st.caption('The two ML models are tools called by the Localisation Agent, not independent agents. In V1 this is replayed from recorded synthetic-network investigations, not a live network scan.')
+
+
+def render_solution_intro(cases, include_architecture=True):
  """Concise visitor onboarding; performance derived from recorded LangSmith runs."""
  b=benchmark_summary(cases)
  st.markdown("""<div style="font-size:1.04rem;line-height:1.55;margin:.15rem 0 .65rem">
@@ -252,21 +302,16 @@ def render_solution_intro(cases):
  </div>""",unsafe_allow_html=True)
  st.markdown('**Demonstrated investigation milestones**')
  x,y,z=st.columns(3)
- facts=[(x,'< 1 min','Detect a material issue',f"SP01 health/scope assessment • {b['health_assessment_under_1min']}/{b['health_assessment_total']} recorded scenarios"),
-        (y,'≤ 2 min','Localise affected scope',f"SP01 localisation/handover • {b['localisation_under_2min']}/{b['localisation_total']} recorded scenarios"),
+ facts=[(x,'< 1 min','Detect a material issue',f"Localisation agent assessment • {b['health_assessment_under_1min']}/{b['health_assessment_total']} recorded scenarios"),
+        (y,'≤ 2 min','Localise affected scope',f"Localisation agent handover • {b['localisation_under_2min']}/{b['localisation_total']} recorded scenarios"),
         (z,'< 5 min','Evidence-grounded RCA',f"Full incident investigation • {b['incident_rca_under_5min']}/{b['incident_total']} incident scenarios")]
  for col,num,title,detail in facts:
   with col:
    st.markdown(f'<div class="ops-milestone"><div class="number">{escape(num)}</div><div class="label">{escape(title)}</div><div class="detail">{escape(detail)}</div></div>',unsafe_allow_html=True)
- st.caption('Benchmarks are from completed synthetic-network LangSmith traces, not production SLAs or validated MTTR savings. Fault/scope identification is measured by the recorded SP01 chain completion; there is no separately timed specialist localisation milestone.')
- st.markdown('**How the architecture works**')
- st.markdown("""<div class="ops-architecture">
-  <div class="step"><strong>1. Network Health &amp; Localisation Agent</strong><span>Initiates scan; calls two ML predictions + Network Overview and Event Telemetry</span></div>
-  <div class="step"><strong>2. Evidence &amp; Routing</strong><span>Assesses materiality and affected cells, sites or CU domains; routes relevant investigation</span></div>
-  <div class="step"><strong>3. Specialist Agents</strong><span>Investigate KPI, cell/peer, radio, processing, transport, configuration or CU/boundary evidence</span></div>
-  <div class="step"><strong>4. RCA Supervisor + RAG</strong><span>Correlates findings, evaluates mechanisms and competing hypotheses, delivers the RCA</span></div>
- </div>""",unsafe_allow_html=True)
- st.caption('Healthy network: direct Supervisor confirmation, without unnecessary specialist escalation. The diagram is conceptual; the animated graph below shows the actual saved route.')
+ st.caption('Benchmarks are from completed synthetic-network LangSmith traces, not production SLAs or validated MTTR savings. Fault/scope identification is measured by the recorded localisation agent completion; there is no separately timed specialist localisation milestone.')
+ if include_architecture:
+  architecture_diagram()
+
 
 
 def render_value_proposition():
@@ -366,7 +411,7 @@ def guided_sp01_cards(sid, unlocked):
     for col,(tool,title,hint) in zip(cols,labels):
         e=next((x for x in cases['evidence_index'] if x['stage']=='SP01' and x['tool']==tool), None)
         visible=tool in unlocked and e is not None
-        value='Awaiting SP01'; desc='Recorded tool not yet presented'
+        value='Awaiting Localisation Agent'; desc='Recorded tool not yet presented'
         if visible:
             payload=load_evidence(sid,e['evidence_id'])['result']
             if tool=='ml_specialist_summary':
@@ -388,7 +433,7 @@ def guided_sp01_cards(sid, unlocked):
         with col:
             st.markdown(f"""<div class="ops-kpi"><div class="name">{escape(title)}</div>
               <div class="value">{escape(value)}</div><div class="desc">{escape(desc)}</div> </div>""",unsafe_allow_html=True)
-    st.caption('These are outputs called by SP01. The two ML prediction outputs do not independently initiate investigations; their probabilities are supporting, uncalibrated evidence.')
+    st.caption('These are outputs called by the Network Health & Localisation Agent. The two ML prediction outputs do not independently initiate investigations; their probabilities are supporting, uncalibrated evidence.')
 
 
 def guided_agent_drilldown(case, current_agent, current_beat):
@@ -512,7 +557,7 @@ def guided_operations_player(selected_sid, include_healthy):
       <div class="ops-pill{' alert' if alert else ''}">{escape(status)}</div></div> </div>""",unsafe_allow_html=True)
     a,b,d,e=st.columns(4)
     a.metric('Presentation timer',format_clock(play['presentation_elapsed']),help='Time spent watching playback, not original execution duration.')
-    b.metric('Recorded SP01 runtime',format_clock(durations['sp01']),help='Original SP01 chain duration from LangSmith.')
+    b.metric('Recorded localisation runtime',format_clock(durations['sp01']),help='Original Network Health & Localisation Agent chain duration from LangSmith.')
     d.metric('Recorded end-to-end RCA' if material else 'Recorded health-check duration',format_clock(durations['total']),help='Original completed LangGraph execution duration, independent of replay pacing.')
     exact=event_trace_offset(case,beat)
     e.metric('Recorded event offset',format_clock(exact),help='Shows an exact recorded timestamp offset only when an original tool start or agent completion timestamp is available.')
@@ -526,16 +571,15 @@ def guided_operations_player(selected_sid, include_healthy):
         active_index=next(i for i,b in enumerate(case_beats) if b['sequence']==beat['sequence'])
         embed_workflow_html(workflow_svg(case['route_family'],case_beats,active_index),height=265,scrolling=False)
     with live:
-        st.markdown(f'**{escape(agent_label(beat["agent"],include_id=True))}**')
+        st.markdown(f'**{escape(agent_label(beat["agent"]))}**')
         st.caption(f'{beat["title"]} · Stage {idx+1}/{len(timeline)}')
         panels=compact_beat_content(beat)
         # Brief, readable previews scroll *inside* their cards; complete content
         # is available below without losing the animation's current position.
         st.markdown(''.join(panels),unsafe_allow_html=True)
-    st.caption('Original evidence: '+beat['source'] +
-               ((' · `'+beat['evidence_id']+'`') if beat.get('evidence_id') else '') +
-               '  ·  Important diagnostic conclusions are held 1.5× longer during autoplay.')
-    with st.expander('Full current-stage messages and SP01 evidence (click to inspect)',expanded=False):
+    st.caption('Recorded '+agent_label(beat['agent'])+' activity · Key conclusions are held 1.5× longer during autoplay. Open the evidence inspector for exact trace identifiers and tool records.')
+    with st.expander('Full current-stage messages and localisation evidence (click to inspect)',expanded=False):
+        st.caption('Original trace provenance: '+beat['source'] + (' · '+beat['evidence_id'] if beat.get('evidence_id') else ''))
         st.markdown('**Incoming context / handover**')
         st.write(beat['input'] or 'No separate input recorded.')
         st.markdown('**Agent action / tool request**')
@@ -543,19 +587,16 @@ def guided_operations_player(selected_sid, include_healthy):
         st.markdown('**Recorded output / feedback**')
         st.write(beat['output'] or 'No output detail recorded.')
         if beat['agent']=='SP01' or assessed:
-            st.markdown('**Network Health & Localisation Agent (SP01) · Two ML predictions + two telemetry services**')
+            st.markdown('**Network Health & Localisation Agent · Two ML predictions + two telemetry services**')
             unlocked=sp01_tools_unlocked(timeline,idx)
             guided_sp01_cards(sid,unlocked)
             if 'telemetry_network_overview' in unlocked:
-                with st.expander('📈 Inspect the recorded 15-minute accessibility trend (SP01 telemetry)'):
+                with st.expander('📈 Inspect the recorded 15-minute accessibility trend (network telemetry)'):
                     network_chart(case)
-    if case['route_family']=='LOCAL_SPECIALISTS':
-        st.caption('Accessibility, Cell & Peer, Radio, Processing, Transport, and Configuration agents ran in parallel; frames are sequential for explanation only.')
-    guided_agent_drilldown(case,beat['agent'],beat)
     if include_healthy and selected_sid!=healthy_sid and sid==healthy_sid:
         st.info('First independent recording: healthy network. After its report, the presentation switches to a **different recorded incident**, not a new alert detected in the same continuous live network.')
     if case['route_family']=='LOCAL_SPECIALISTS':
-        st.caption('SP02–SP07 ran as parallel branches; presentation frames are sequential for explanation, not execution chronology.')
+        st.caption('The six cell/site specialist agents ran as parallel branches; frames are sequential for explanation, not execution chronology.')
     guided_agent_drilldown(case,beat['agent'],beat)
     if beat['agent']=='FINAL':
         if not material:st.success('Recorded health check complete: no material degradation identified; no specialist escalation was needed.')
@@ -571,12 +612,12 @@ def guided_operations_player(selected_sid, include_healthy):
 # Sidebar state
 manifest=load_manifest()
 st.sidebar.markdown('### ◈ TELECOM AI ENGINEERING')
-st.sidebar.caption('M05_06D • Recorded Investigation Replay')
+st.sidebar.caption('Recorded 5G Network Investigations')
 st.sidebar.divider()
 if 'requested_page' in st.session_state:
  st.session_state['nav_page']=st.session_state.pop('requested_page')
 if 'selected_scenario' not in st.session_state:st.session_state['selected_scenario']='M05I0003'
-if 'nav_page' not in st.session_state:st.session_state['nav_page']='Guided Operations Demo'
+if 'nav_page' not in st.session_state:st.session_state['nav_page']='Platform Overview'
 page=st.sidebar.radio('Workspace',PAGES,key='nav_page')
 opts={x:x+'   ·   '+next(c['title'] for c in manifest['cases'] if c['scenario_id']==x) for x in manifest['scenario_order']}
 if page=='Scenario Library':
@@ -586,7 +627,7 @@ if page=='Scenario Library':
  sid=st.session_state['library_case_selection']
  st.session_state['selected_scenario']=sid
 else:
- sid=st.sidebar.selectbox('Scenario',options=manifest['scenario_order'],format_func=lambda x:opts[x],key='selected_scenario')
+ sid=st.sidebar.selectbox('Select scenario ▾',options=manifest['scenario_order'],format_func=lambda x:opts[x],key='selected_scenario')
 st.session_state['_last_page']=page
 c=load_case(sid)
 st.sidebar.divider()
@@ -596,8 +637,20 @@ st.sidebar.caption('Synthetic experimental network • not production operations
 
 st.markdown(f'''<div class="hero"><div class="eyebrow">Telecom AI Engineering / Module 5</div><h1>Telecom AI Engineering Platform</h1><div class="sub">Intelligent network assessment · ML-assisted localisation · Specialist AI investigation · Knowledge-grounded root cause analysis</div></div>''',unsafe_allow_html=True)
 
-if page=='Guided Operations Demo':
+if page=='Platform Overview':
+ heading('Discover the Platform','What has been built, what it has demonstrated, and how the investigation architecture works.')
  render_solution_intro([load_case(x) for x in manifest['scenario_order']])
+ st.divider()
+ st.markdown('### Watch a recorded investigation')
+ st.write('Follow the Network Health & Localisation Agent through its two ML predictions, network telemetry, specialist analysis, knowledge-grounded reasoning and final RCA. Pause anywhere to inspect the original evidence.')
+ if st.button('▶ Start the Guided Operations Demo',type='primary',use_container_width=True):
+  st.session_state['requested_page']='Guided Operations Demo';st.rerun()
+ st.divider()
+ render_value_proposition()
+
+elif page=='Guided Operations Demo':
+ render_solution_intro([load_case(x) for x in manifest['scenario_order']],include_architecture=False)
+ st.caption('The full solution architecture and design explanation are on **Platform Overview**, the first page in the sidebar.')
  heading('Guided Operations Demo','An animated, engineer-inspectable journey from network health assessment to evidence-grounded root cause analysis. All data comes from completed, independent LangGraph runs.')
  main_sid=sid if sid!='M05I0017' else 'M05I0003'
  modes=['Healthy check → Separate incident','Incident investigation only'] if sid!='M05I0017' else ['Healthy check only']
@@ -631,7 +684,7 @@ elif page=='Network Overview':
   m1,m2,m3=st.columns(3)
   m1.metric('Sites',len(sites));m2.metric('CU domains',len(cu));m3.metric('NR CU cells',len(cells))
   st.markdown('**5G RAN accessibility investigation**')
-  st.write('The Network Health & Localisation Agent (SP01) invokes ML predictions and network telemetry, assesses the evidence, and routes material incidents to the appropriate specialist branch and RCA Supervisor.')
+  st.write('The Network Health & Localisation Agent invokes ML predictions and network telemetry, assesses the evidence, and routes material incidents to the appropriate specialist branch and RCA Supervisor.')
   st.markdown(f'<div class="route-box">{route_text(c)}</div>',unsafe_allow_html=True)
  st.divider()
  heading('Investigation portfolio')
@@ -702,7 +755,7 @@ elif page=='Agentic Replay':
   active=stages[step];item=c['stage_data'][active['key']]
   st.subheader(f"{agent_label(active['agent'],include_id=True)}  /  {active['label']}")
   if active['key']=='sp01_evidence_cycle_1':
-   st.write('SP01 retrieved the following source records before localizing the suspected incident:')
+   st.write('The Network Health & Localisation Agent retrieved the following source records before localizing the suspected incident:')
    for name,v in item.items():st.markdown(f"• **{name}** · `{v.get('evidence_id')}`")
   elif active['key']=='supervisor_output':
    st.markdown('**Final recorded decision**')

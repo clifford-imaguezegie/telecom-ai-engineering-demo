@@ -280,14 +280,16 @@ def workflow_svg(route_family, story, active_index):
         if agent==current:
             parts.append(f'<rect x="{x-r-5}" y="{y-27}" width="{2*r+10}" height="56" rx="15" fill="none" stroke="#46e6b5" stroke-width="2" class="activepulse"/>')
         parts.append(f'<rect x="{x-r}" y="{y-22}" width="{2*r}" height="{height}" rx="10" fill="{fill}" stroke="{stroke}" stroke-width="2"/>')
-        # Public-friendly role names; original SP identifiers remain visible in small text.
+        # Public-friendly role names only; internal SP IDs remain in technical provenance.
         name={'SP01':'Network Health','SP02':'Accessibility KPI','SP03':'Cell & Peer','SP04':'Radio Analysis',
               'SP05':'Processing','SP06':'Transport','SP07':'Configuration','SP08':'CU & Boundary',
               'SUPERVISOR':'RCA Supervisor','LOCAL_JOIN':'Evidence Join','CU_JOIN':'CU Join',
               'DIRECT_JOIN':'Direct Review','FINAL':'Final RCA'}.get(agent,agent)
-        sub={'SP01':'SP01 · Localisation','SUPERVISOR':'SUPERVISOR · synthesis', 'FINAL':'Recorded report',
+        sub={'SP01':'ML + telemetry','SUPERVISOR':'Evidence synthesis','FINAL':'Recorded report',
              'LOCAL_JOIN':'Parallel branches','CU_JOIN':'CU branch','DIRECT_JOIN':'Healthy control',
-             'SP02':'SP02','SP03':'SP03','SP04':'SP04','SP05':'SP05','SP06':'SP06','SP07':'SP07','SP08':'SP08'}.get(agent,'')
+             'SP02':'KPI evidence','SP03':'Cell comparisons','SP04':'Radio evidence',
+             'SP05':'Processing evidence','SP06':'Transport evidence','SP07':'Config evidence',
+             'SP08':'CU-domain evidence'}.get(agent,'')
         parts.append(f'<text x="{x}" y="{y-4}" font-size="12.5" text-anchor="middle" font-weight="700" fill="#eaf6ff">{escape(name)}</text>')
         parts.append(f'<text x="{x}" y="{y+11}" font-size="10" text-anchor="middle" fill="#a8cddd">{escape(sub)}</text>')
         if agent==current:
