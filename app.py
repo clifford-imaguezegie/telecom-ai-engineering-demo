@@ -5,17 +5,27 @@ RAG/LLMs, MCP telemetry, or any external service. It reads only bundled gzip.
 """
 import gzip
 import json
+import time
+from storyboard import AGENT_ROLES, build_story, workflow_svg, evidence_preview
+from operational_demo import (guided_sequence, get_run_durations, event_trace_offset,
+                              format_clock, sp01_tools_unlocked, available_agents)
+from html import escape
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+try:
+ from streamlit.components.v1 import html as embed_workflow_html
+except ImportError:
+ # Lightweight local test stub has no Streamlit package hierarchy.
+ embed_workflow_html = st.components.v1.html
 
 BASE = Path(__file__).resolve().parent
 DATA = BASE / 'data'
-PAGES = ['Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
+PAGES = ['Guided Operations Demo','Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
 
-st.set_page_config(page_title='Telecom AI | Investigation Replay',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
+st.set_page_config(page_title='Telecom AI | Guided Operations & RCA',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
 st.markdown('''<style>
 .block-container {padding-top:1.5rem;padding-bottom:3rem;max-width:1500px}
 [data-testid="stSidebar"]{background:#101e30}
@@ -26,6 +36,23 @@ h1,h2,h3{letter-spacing:-.025em}
 .hero h1{margin:.18rem 0 .35rem 0;font-size:1.9rem;font-weight:740;color:#fff}
 .hero .sub{color:#c3d7e4;font-size:.91rem}
 .note{font-size:.86rem;color:#6b7b8b}
+.ops-hero{padding:1.3rem 1.5rem;border-radius:15px;background:linear-gradient(110deg,#102b42,#123e48);color:#edf8fb;border:1px solid #29536a;margin:.7rem 0 1rem 0;box-shadow:0 8px 28px rgba(12,30,48,.12)}
+.ops-eyebrow{font-size:.73rem;font-weight:750;letter-spacing:.13em;color:#a6cbd4}
+.ops-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+.ops-headline{font-size:1.46rem;font-weight:760;letter-spacing:-.025em;margin:.22rem 0}
+.ops-sub{color:#c4dce3;font-size:.9rem;line-height:1.6}
+.ops-pill{display:inline-block;border:1px solid #6597a7;background:#1c4d5b;padding:7px 11px;border-radius:22px;color:#e3fbf4;font-size:.76rem;font-weight:700;letter-spacing:.045em}
+.ops-pill.alert{background:#793c35;border-color:#d88772;color:#fff2ee}
+.ops-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#74efd1;margin-right:6px;box-shadow:0 0 0 4px rgba(116,239,209,.1);animation:opsblink 1.5s infinite}
+@keyframes opsblink{50%{opacity:.35;transform:scale(.85)}}
+.ops-stage{border-radius:13px;border:1px solid #34586b;background:#10263b;color:#e9f4fb;padding:1rem 1.2rem;margin:.6rem 0}
+.ops-stage .role{letter-spacing:.13em;color:#8cc9db;font-size:.69rem;font-weight:750}
+.ops-stage .act{font-size:1.17rem;font-weight:750;margin:.4rem 0}
+.ops-stage .message{color:#b8d2e1;font-size:.9rem;line-height:1.6}
+.ops-kpi{border:1px solid #365e6c;background:#173244;border-radius:12px;padding:.9rem;height:100%;color:#f0fbff;min-height:112px}
+.ops-kpi .name{font-size:.72rem;letter-spacing:.06em;color:#a6c9d5;text-transform:uppercase}
+.ops-kpi .value{font-size:1.12rem;font-weight:800;margin:.5rem 0 .2rem;overflow-wrap:anywhere}
+.ops-kpi .desc{font-size:.75rem;color:#c0d8e0}
 .route-box{background:#f6f9fc;border:1px solid #dce8f1;padding:.8rem 1rem;border-radius:10px;font-size:.88rem;line-height:2.15}
 @media (prefers-color-scheme:dark){.route-box{background:#1a2631;border:1px solid #405261}}
 </style>''',unsafe_allow_html=True)
@@ -176,6 +203,290 @@ def render_kb_contribution(supervisor):
  kb_list('Recorded limitations',k.get('limitations'),empty='No additional limitations recorded in this field')
  st.caption('Provenance: Supervisor final knowledge_base_contribution field from the selected LangSmith trace. These are the Supervisor’s recorded interpretations, not redistributed retrieval passages, formal document citations or a measured causal RAG performance gain. Deterministic network observations carry primary weight; knowledge is SUPPORTING evidence.')
 
+@st.cache_data(show_spinner=False,max_entries=12)
+def load_storyboard(sid):
+ c = load_case(sid)
+ return build_story(c,lambda eid:load_evidence(sid,eid))
+
+@st.fragment(run_every='1s')
+def cinematic_replay(sid):
+ """Autoplay of saved evidence only. A refresh advances one authored beat, not a live run."""
+ c=load_case(sid)
+ beats=load_storyboard(sid)
+ key='cinema_'+sid
+ if key not in st.session_state:
+  st.session_state[key]={'index':0,'playing':False,'seconds':3,'last_tick':time.monotonic()}
+ player=st.session_state[key]
+ last=len(beats)-1
+ now=time.monotonic()
+ if player['playing'] and now-player['last_tick']>=player['seconds']:
+  player['index']=min(last,player['index']+1)
+  player['last_tick']=now
+  if player['index']==last:player['playing']=False
+
+ ctrl=st.columns([1.25,.9,.85,.85,1.6])
+ with ctrl[0]:
+  if st.button('⏸ Pause' if player['playing'] else '▶ Play',type='primary',use_container_width=True,key='cinema_play_'+sid):
+   if not player['playing'] and player['index']==last:player['index']=0
+   player['playing']=not player['playing']; player['last_tick']=time.monotonic()
+   st.rerun(scope='fragment')
+ with ctrl[1]:
+  if st.button('◀ Back',disabled=player['index']==0,use_container_width=True,key='cinema_back_'+sid):
+   player['playing']=False; player['index']-=1;player['last_tick']=time.monotonic();st.rerun(scope='fragment')
+ with ctrl[2]:
+  if st.button('Next ▶',disabled=player['index']==last,use_container_width=True,key='cinema_next_'+sid):
+   player['playing']=False;player['index']+=1;player['last_tick']=time.monotonic();st.rerun(scope='fragment')
+ with ctrl[3]:
+  if st.button('↺ Restart',use_container_width=True,key='cinema_restart_'+sid):
+   player['index']=0;player['playing']=False;player['last_tick']=time.monotonic();st.rerun(scope='fragment')
+ with ctrl[4]:
+  speed=st.selectbox('Pacing per beat',[2,3,5,8],index=[2,3,5,8].index(player['seconds']),format_func=lambda v:f'{v} seconds',label_visibility='collapsed',key='cinema_speed_'+sid)
+  if speed!=player['seconds']:
+   player['seconds']=speed;player['last_tick']=time.monotonic()
+
+ seek=st.slider('Presentation timeline',min_value=0,max_value=last,value=player['index'],format='%d',key='cinema_seek_'+sid+'_'+str(player['index']))
+ if seek!=player['index']:
+  player['index']=seek;player['playing']=False;player['last_tick']=time.monotonic();st.rerun(scope='fragment')
+ idx=player['index']
+ beat=beats[idx]
+ st.progress((idx+1)/len(beats),text=f'PLAYBACK {idx+1} / {len(beats)}  •  {"PLAYING" if player["playing"] else "PAUSED"}  •  {beat["agent"]} {AGENT_ROLES.get(beat["agent"],"")}')
+ embed_workflow_html(workflow_svg(c['route_family'],beats,idx),height=390,scrolling=False)
+ st.markdown(f'#### {idx+1:02d} — {beat["title"]}')
+ panels=st.columns([1,1,1.12])
+ with panels[0]:
+  st.markdown('**📥 INPUT / HANDOVER**')
+  st.info(beat['input'] or 'No separate input detail saved for this stage.')
+ with panels[1]:
+  st.markdown('**⚙️ AGENT ACTION / TOOL CALL**')
+  st.write(beat['action'] or 'Recorded analysis stage.')
+ with panels[2]:
+  st.markdown('**📤 RECORDED OUTPUT / FEEDBACK**')
+  st.success(beat['output'] or 'No separate output detail saved in this field.')
+ if beat.get('timestamp'):
+  st.caption('Original recorded tool start: '+nice_time(beat['timestamp']))
+ st.caption('Provenance: '+beat['source']+(('  ·  Evidence ID: `'+beat['evidence_id']+'`') if beat['evidence_id'] else ''))
+ if c['route_family']=='LOCAL_SPECIALISTS':
+  st.caption('SP02–SP07 are parallel analytical branches in the saved LangGraph design. This guided playback reviews their recorded outputs in a human-readable sequence; it does not imply they originally ran sequentially.')
+ st.caption('Playback pacing is illustrative, not the original execution timing. Original node timestamps/durations are available under the technical stage inspector. No network scan, LLM, RAG, or tool call is executed here.')
+ with st.expander('Original recorded source for the current beat'):
+  stage=c['stages'][beat['stage_index']]
+  st.markdown('**Saved stage:** '+stage['label']+' · `'+stage['key']+'`')
+  if beat['evidence_id']:
+   ev=load_evidence(sid,beat['evidence_id'])
+   st.json({'tool':ev.get('tool'),'evidence_id':beat['evidence_id'],'result_keys':list((ev.get('result') or {}).keys()) if isinstance(ev.get('result'),dict) else [],'source_stage':ev.get('stage')},expanded=False)
+   st.caption('Large recorded tool responses remain accessible on Engineering Evidence rather than rendered unfiltered here.')
+  else:
+   st.json(c['stage_data'][stage['key']],expanded=False)
+ if beat['agent']=='FINAL':
+  if st.button('Open Root Cause Analysis →',key='cinema_rca_'+sid):
+   st.session_state['requested_page']='Root Cause Analysis';st.rerun()
+
+
+# Guided operations presentation: all inputs and outputs are frozen trace records.
+# This fragment is a media player, never a monitor, a model invocation or an agent run.
+def guided_sp01_cards(sid, unlocked):
+    cases = load_case(sid)
+    labels = [
+        ('ml_specialist_summary', 'ML 01 · Fault family', 'WHAT'),
+        ('ml_scope_probabilities', 'ML 02 · Affected scope', 'WHERE'),
+        ('telemetry_network_overview', 'Network Overview Telemetry', 'KPI evidence'),
+        ('telemetry_events', 'Network Event Telemetry', 'Event evidence'),
+    ]
+    cols=st.columns(4)
+    for col,(tool,title,hint) in zip(cols,labels):
+        e=next((x for x in cases['evidence_index'] if x['stage']=='SP01' and x['tool']==tool), None)
+        visible=tool in unlocked and e is not None
+        value='Awaiting SP01'; desc='Recorded tool not yet presented'
+        if visible:
+            payload=load_evidence(sid,e['evidence_id'])['result']
+            if tool=='ml_specialist_summary':
+                hit=payload.get('top_fault_family') or {}
+                value=pretty(hit.get('label'))
+                desc=f"ML score {float(hit.get('probability',0)):.1%} · uncalibrated"
+            elif tool=='ml_scope_probabilities':
+                hits=payload.get('ranked_scopes') or []
+                value=pretty(hits[0].get('label')) if hits else 'No scope predicted'
+                desc=(f"ML score {float(hits[0].get('probability',0)):.1%} · uncalibrated" if hits else 'Not recorded')
+            elif tool=='telemetry_network_overview':
+                rows=payload.get('subnetwork_kpis') or []
+                value=f'{len(rows)} KPI observations'
+                desc='Recorded 15-minute PM measurements'
+            else:
+                events=payload if isinstance(payload,list) else payload.get('events',[])
+                value=f'{len(events)} returned events'
+                desc='Recorded event telemetry (zero is a valid result)'
+        with col:
+            st.markdown(f"""<div class="ops-kpi"><div class="name">{escape(title)}</div>
+              <div class="value">{escape(value)}</div><div class="desc">{escape(desc)}</div> </div>""",unsafe_allow_html=True)
+    st.caption('These are outputs called by SP01. The two ML prediction outputs do not independently initiate investigations; their probabilities are supporting, uncalibrated evidence.')
+
+
+def guided_agent_drilldown(case, current_agent, current_beat):
+    sid=case['scenario_id']
+    agents=available_agents(case)
+    if not agents:return
+    with st.expander('🔎 Engineer drill-down — inspect any recorded agent, its tools and outputs',expanded=False):
+        st.caption('All panels inspect stored execution records. Choosing an agent does not start a new investigation.')
+        follow='↪ Follow highlighted agent'
+        choice=st.selectbox('Agent to inspect',[follow]+agents,
+                          format_func=lambda a:a if a==follow else a+' · '+AGENT_ROLES.get(a,a),
+                          key='ops_agent_pick_'+sid)
+        pick=(current_agent if current_agent in agents else 'SUPERVISOR') if choice==follow else choice
+        src_stages=[s for s in case['stages'] if s['agent']==pick]
+        st.markdown('**Original analytical stages · '+pick+'**')
+        current_index=current_beat['stage_index']
+        matching_key=case['stages'][current_index]['key'] if current_index < len(case['stages']) else None
+        default_stage=next((i for i,v in enumerate(src_stages) if v['key']==matching_key),0)
+        stage=st.selectbox('Saved stage',src_stages,index=default_stage,
+                           format_func=lambda x:x['label'],
+                           key='ops_stage_pick_'+sid+'_'+pick+(('_follow_'+str(current_index)) if choice==follow else ''))
+        data_field_sections(case['stage_data'][stage['key']],show_json=True)
+        if pick=='SUPERVISOR' and stage['key']=='supervisor_output':
+            render_kb_contribution(case['stage_data']['supervisor_output'])
+        evs=[e for e in case['evidence_index'] if e['stage']==pick]
+        if evs:
+            st.markdown('**Agent-initiated tool calls and recorded replies**')
+            e=st.selectbox('Evidence artifact',evs,
+                format_func=lambda v:display_tool_name(v['tool'])+' · '+v['evidence_id'][-8:],
+                key='ops_evidence_pick_'+sid+'_'+pick)
+            payload=load_evidence(sid,e['evidence_id'])
+            st.info(evidence_preview(e,payload))
+            with st.expander('Evidence metadata and safe data preview'):
+                st.json({'tool':display_tool_name(e['tool']),'source_tool_identifier':e['tool'],
+                         'evidence_id':e['evidence_id'],'reason':e.get('reason'),
+                         'result_keys':list(payload.get('result',{}).keys()) if isinstance(payload.get('result'),dict) else [],
+                         'stored_data_type':type(payload.get('result')).__name__},expanded=False)
+                st.caption('For complete KPI measurements, source series, and evidence IDs use Engineering Evidence. Third-party retrieved knowledge passages are not in this public dataset.')
+        agent_nodes=[n for n in case['observed_nodes'] if n['name']==pick and n.get('depth')==1]
+        if agent_nodes:
+            n=agent_nodes[0]
+            st.caption(f"Saved {pick} execution: {float(n.get('duration_seconds') or 0):.2f} seconds · {nice_time(n.get('start_time'))} to {nice_time(n.get('end_time'))}")
+
+
+@st.fragment(run_every='1s')
+def guided_operations_player(selected_sid, include_healthy):
+    healthy_sid='M05I0017'
+    healthy=load_case(healthy_sid)
+    incident=load_case(selected_sid)
+    timeline=guided_sequence(healthy,load_storyboard(healthy_sid),
+        incident if selected_sid != healthy_sid else None,
+        load_storyboard(selected_sid) if selected_sid != healthy_sid else [],
+        include_healthy=include_healthy or selected_sid==healthy_sid)
+    if not timeline:
+        st.warning('No recorded investigation selected.')
+        return
+    key='ops_player_'+selected_sid+'_'+str(include_healthy)
+    if key not in st.session_state:
+        st.session_state[key]={'index':0,'playing':False,'seconds':3,'last_tick':time.monotonic(),
+                               'carry':0.,'presentation_elapsed':0.}
+    play=st.session_state[key]
+    last=len(timeline)-1
+    now=time.monotonic()
+    if play['playing']:
+        dt=max(0.,min(now-play['last_tick'],3.))
+        play['carry']+=dt
+        play['presentation_elapsed']+=dt
+        while play['carry'] >= play['seconds'] and play['index'] < last:
+            play['carry']-=play['seconds']
+            play['index']+=1
+        if play['index']>=last:
+            play['playing']=False
+            play['carry']=0.
+    play['last_tick']=now
+
+    controls=st.columns([1.1,.85,.85,.9,1.45])
+    with controls[0]:
+        if st.button('⏸ Pause' if play['playing'] else '▶ Play',type='primary',use_container_width=True,key=key+'_play'):
+            if not play['playing'] and play['index']==last:play['index']=0;play['presentation_elapsed']=0.
+            play['playing']=not play['playing'];play['carry']=0.;play['last_tick']=time.monotonic()
+            st.rerun(scope='fragment')
+    with controls[1]:
+        if st.button('◀ Back',disabled=play['index']==0,use_container_width=True,key=key+'_back'):
+            play['playing']=False;play['index']-=1;play['carry']=0.;st.rerun(scope='fragment')
+    with controls[2]:
+        if st.button('Next ▶',disabled=play['index']==last,use_container_width=True,key=key+'_next'):
+            play['playing']=False;play['index']+=1;play['carry']=0.;st.rerun(scope='fragment')
+    with controls[3]:
+        if st.button('↺ Restart',use_container_width=True,key=key+'_restart'):
+            play.update({'index':0,'playing':False,'carry':0.,'presentation_elapsed':0.,'last_tick':time.monotonic()})
+            st.rerun(scope='fragment')
+    with controls[4]:
+        speed=st.selectbox('Playback pacing',[2,3,5,8],
+                           index=[2,3,5,8].index(play['seconds']),
+                           format_func=lambda x:f'{x}s per presentation beat',
+                           label_visibility='collapsed',key=key+'_pace')
+        if speed!=play['seconds']:play['seconds']=speed;play['carry']=0.
+    changed=st.slider('Playback position',min_value=0,max_value=last,value=play['index'],
+                      key=key+'_seek_'+str(play['index']))
+    if changed!=play['index']:
+        play['index']=changed;play['playing']=False;play['carry']=0.;st.rerun(scope='fragment')
+    idx=play['index'];item=timeline[idx];sid=item['scenario_id'];beat=item['beat'];case=healthy if sid==healthy_sid else incident
+    durations=get_run_durations(case)
+    scoped=timeline[:idx+1]
+    at_end=beat['agent']=='FINAL'
+    material=case['derived_display']['incident_present']
+    assessed=any(x['scenario_id']==sid and x['beat']['kind']=='decision' and x['beat']['agent']=='SP01' for x in scoped)
+    if not assessed:status='ASSESSMENT UNDERWAY'
+    elif not material:status='NO MATERIAL INCIDENT'
+    elif at_end:status='RCA AVAILABLE'
+    else:status='DEGRADATION IDENTIFIED'
+    alert=material and assessed
+    title='Network Health Assessment' if not material else 'Incident Investigation & Root Cause Analysis'
+    st.markdown(f"""<div class="ops-hero"><div class="ops-head"><div>
+      <div class="ops-eyebrow"><span class="ops-dot"></span>{escape(item['act'])} · RECORDED LANGGRAPH REPLAY</div>
+      <div class="ops-headline">{escape(title)}</div>
+      <div class="ops-sub">{escape(sid)} · {escape(case['title'])}</div></div>
+      <div class="ops-pill{' alert' if alert else ''}">{escape(status)}</div></div> </div>""",unsafe_allow_html=True)
+    a,b,d,e=st.columns(4)
+    a.metric('Presentation timer',format_clock(play['presentation_elapsed']),help='Time spent watching playback, not original execution duration.')
+    b.metric('Recorded SP01 runtime',format_clock(durations['sp01']),help='Original SP01 chain duration from LangSmith.')
+    d.metric('Recorded end-to-end RCA' if material else 'Recorded health-check duration',format_clock(durations['total']),help='Original completed LangGraph execution duration, independent of replay pacing.')
+    exact=event_trace_offset(case,beat)
+    e.metric('Recorded event offset',format_clock(exact),help='Shows an exact recorded timestamp offset only when an original tool start or agent completion timestamp is available.')
+    st.progress((idx+1)/len(timeline),text=f'Guided journey {idx+1} / {len(timeline)} · {"PLAYING" if play["playing"] else "PAUSED"} · {item["act"]}')
+    # The existing scenario-dependent SVG distinguishes parallel, CU and direct routes.
+    case_beats=load_storyboard(sid)
+    active_index=next(i for i,b in enumerate(case_beats) if b['sequence']==beat['sequence'])
+    embed_workflow_html(workflow_svg(case['route_family'],case_beats,active_index),height=390,scrolling=False)
+    st.markdown(f"""<div class="ops-stage"><div class="role">ACTIVE · {escape(beat['agent'])} / {escape(AGENT_ROLES.get(beat['agent'],''))}</div>
+       <div class="act">{escape(beat['title'])}</div>
+       <div class="message">{escape(beat['action'])}</div> </div>""",unsafe_allow_html=True)
+    if beat['agent']=='SP01' or assessed:
+        st.markdown('**SP01 · Dual ML predictions and two network telemetry services**')
+        unlocked=sp01_tools_unlocked(timeline,idx)
+        guided_sp01_cards(sid,unlocked)
+        if 'telemetry_network_overview' in unlocked:
+            with st.expander('📈 Inspect the recorded 15-minute accessibility trend (SP01 telemetry)'):
+                network_chart(case)
+                st.caption('The original KPI series is available to inspect at any point after SP01 calls Network Overview Telemetry. It is not a fresh data poll.')
+    panes=st.columns(3)
+    with panes[0]:
+        st.markdown('**01 · Incoming context**')
+        st.info(beat['input'] or 'No separate input recorded.')
+    with panes[1]:
+        st.markdown('**02 · Agent action**')
+        st.write(beat['action'])
+    with panes[2]:
+        st.markdown('**03 · Evidence / feedback**')
+        st.success(beat['output'] or 'No separate output recorded.')
+    st.caption('Original evidence: '+beat['source'] +
+               ((' · `'+beat['evidence_id']+'`') if beat.get('evidence_id') else ''))
+    if include_healthy and selected_sid!=healthy_sid and sid==healthy_sid:
+        st.info('First independent recording: healthy network. After its report, the presentation switches to a **different recorded incident**, not a new alert detected in the same continuous live network.')
+    if case['route_family']=='LOCAL_SPECIALISTS':
+        st.caption('SP02–SP07 ran as parallel branches; presentation frames are sequential for explanation, not execution chronology.')
+    guided_agent_drilldown(case,beat['agent'],beat)
+    if beat['agent']=='FINAL':
+        if not material:st.success('Recorded health check complete: no material degradation identified; no specialist escalation was needed.')
+        else:
+            st.success('Recorded investigation complete. Diagnosis: '+str(case['derived_display'].get('diagnosis') or 'See Supervisor final output.'))
+        if st.button('View complete Root Cause Analysis →',key=key+'_rca'):
+            st.session_state['selected_scenario']=sid
+            st.session_state['requested_page']='Root Cause Analysis'
+            st.rerun()
+    st.caption('Two clocks: presentation timer = playback viewing time; SP01/end-to-end/event offset = measured original LangSmith times. No new ML inference, telemetry polling, agent execution or RAG search occurs. Each case is a separate synthetic-network snapshot.')
+
+
 # Sidebar state
 manifest=load_manifest()
 st.sidebar.markdown('### ◈ TELECOM AI ENGINEERING')
@@ -183,8 +494,8 @@ st.sidebar.caption('M05_06D • Recorded Investigation Replay')
 st.sidebar.divider()
 if 'requested_page' in st.session_state:
  st.session_state['nav_page']=st.session_state.pop('requested_page')
-if 'selected_scenario' not in st.session_state:st.session_state['selected_scenario']='M05I0002'
-if 'nav_page' not in st.session_state:st.session_state['nav_page']='Network Overview'
+if 'selected_scenario' not in st.session_state:st.session_state['selected_scenario']='M05I0003'
+if 'nav_page' not in st.session_state:st.session_state['nav_page']='Guided Operations Demo'
 page=st.sidebar.radio('Workspace',PAGES,key='nav_page')
 opts={x:x+'   ·   '+next(c['title'] for c in manifest['cases'] if c['scenario_id']==x) for x in manifest['scenario_order']}
 sid=st.sidebar.selectbox('Scenario',options=manifest['scenario_order'],format_func=lambda x:opts[x],key='selected_scenario')
@@ -194,9 +505,23 @@ st.sidebar.caption('MODE  01 — STATIC / OFFLINE REPLAY')
 st.sidebar.caption('No live agent, telemetry, LLM, API key or paid inference calls.')
 st.sidebar.caption('Synthetic experimental network • not production operations')
 
-st.markdown(f'''<div class="hero"><div class="eyebrow">Telecom AI Engineering / Module 5</div><h1>Evidence-Grounded Investigation Replay</h1><div class="sub">Recorded LangGraph execution • 9 selected scenarios • 15-minute 5G RAN accessibility measurements • V1 static demonstration</div></div>''',unsafe_allow_html=True)
+st.markdown(f'''<div class="hero"><div class="eyebrow">Telecom AI Engineering / Module 5</div><h1>Telecom Network Intelligence &amp; Investigation</h1><div class="sub">Recorded LangGraph execution • 9 selected scenarios • SP01-led ML + telemetry • Specialist agents • RAG reasoning • Recorded execution</div></div>''',unsafe_allow_html=True)
 
-if page=='Network Overview':
+if page=='Guided Operations Demo':
+ heading('Guided Operations Demo','An animated, engineer-inspectable journey from network health assessment to evidence-grounded root cause analysis. All data comes from completed, independent LangGraph runs.')
+ main_sid=sid if sid!='M05I0017' else 'M05I0003'
+ modes=['Healthy check → Separate incident','Incident investigation only'] if sid!='M05I0017' else ['Healthy check only']
+ mode=st.radio('Presentation',modes,horizontal=True)
+ if sid=='M05I0017':st.info('Healthy-control scenario selected. Choose an incident in the sidebar to show a complete health-to-incident demonstration.')
+ elif mode==modes[0]:
+  st.info('**Two independent saved scenarios:** M05I0017 (healthy control), then '+main_sid+' ('+c['title']+'). The scene change is editorial, not an assertion that the healthy network developed a fault. The original 15-minute telemetry interval is independent of playback speed.')
+ else:
+  st.caption('Single recorded incident investigation. The animated pace is for explanation, not a claim that the platform is running now.')
+ guided_operations_player(main_sid if sid!='M05I0017' else sid,mode==modes[0])
+ st.divider()
+ st.markdown('**Want more detail?** Open **Agentic Replay** for every recorded call and stage, **Engineering Evidence** for source KPI series, or **Evaluation & Performance** for the original trace measurements and post-run checks.')
+
+elif page=='Network Overview':
  heading('Network Overview','Nine independent synthetic-network snapshots, each with its own recorded observation window. Not a single continuous live network timeline.')
  cases=manifest['cases']
  a,b,d,e=st.columns(4)
@@ -258,40 +583,46 @@ elif page=='Scenario Library':
   st.info('This replay shows the outcome of an already completed investigation. Selecting another scenario does not execute a new investigation.')
 
 elif page=='Agentic Replay':
- heading('Agentic Investigation Replay','Reveal the actual saved SP01, specialist, and Supervisor reasoning stages in sequence. This is navigation through recorded outputs—not rerunning models.')
- stages=c['stages']; key='replay_'+sid
- if key not in st.session_state:st.session_state[key]=0
- step=st.session_state[key];step=min(step,len(stages)-1)
- col1,col2,col3,col4=st.columns([.8,.8,4,.8])
- with col1:
-  if st.button('◀ Previous',disabled=step==0,use_container_width=True):st.session_state[key]=step-1;st.rerun()
- with col2:
-  if st.button('Next ▶',disabled=step>=len(stages)-1,use_container_width=True):st.session_state[key]=step+1;st.rerun()
- with col3:
-  new=st.select_slider('Recorded stage',options=list(range(len(stages))),value=step,format_func=lambda i:f'{i+1:02d} — {stages[i]["label"]}')
-  if new!=step:st.session_state[key]=new;st.rerun()
- with col4:st.metric('Stage',f'{step+1}/{len(stages)}')
- st.progress((step+1)/len(stages))
- st.write('**Recorded routing:** '+route_text(c))
- if c['route_family']=='LOCAL_SPECIALISTS':st.caption('SP02–SP07 form parallel analytical branches; the stage navigator presents their saved outputs sequentially for inspection.')
- active=stages[step];item=c['stage_data'][active['key']]
- st.subheader(f"{active['agent']}  /  {active['label']}")
- if active['key']=='sp01_evidence_cycle_1':
-  st.write('SP01 retrieved the following source records before localizing the suspected incident:')
-  for name,v in item.items():st.markdown(f"• **{name}** · `{v.get('evidence_id')}`")
- elif active['key']=='supervisor_output':
-  st.markdown('**Final recorded decision**')
-  st.write(item.get('diagnosis') or 'No issue')
-  st.markdown('**Fault family:** '+pretty(item.get('root_cause_family')))
-  st.markdown('**Scope:** '+pretty(item.get('scope_class')))
-  data_field_sections(item,show_json=True)
-  st.divider()
-  render_kb_contribution(item)
+ heading('Agentic Investigation Replay','Interactive animated workflow with recorded network scan, specialist dispatch, tool calls, evidence feedback and Supervisor final assessment.')
+ mode=st.radio('Replay mode',['▶ Animated workflow','Recorded-stage inspector'],horizontal=True,key='replay_mode')
+ if mode=='▶ Animated workflow':
+  st.caption('Play or scrub through the original recorded investigation. A highlighted agent indicates the point being *presented*, not an active live process.')
+  cinematic_replay(sid)
  else:
-  data_field_sections(item,show_json=True)
- with st.expander('All recorded LangSmith nodes and timestamps'):
-  df=pd.DataFrame(c['observed_nodes'])[['name','run_type','depth','start_time','duration_seconds','status','total_tokens','total_cost']]
-  st.dataframe(df,hide_index=True,use_container_width=True,height=350)
+  heading('Recorded-stage inspector','Reveal the actual saved SP01, specialist, and Supervisor reasoning stages in sequence. This is navigation through recorded outputs—not rerunning models.')
+  stages=c['stages']; key='replay_'+sid
+  if key not in st.session_state:st.session_state[key]=0
+  step=st.session_state[key];step=min(step,len(stages)-1)
+  col1,col2,col3,col4=st.columns([.8,.8,4,.8])
+  with col1:
+   if st.button('◀ Previous',disabled=step==0,use_container_width=True):st.session_state[key]=step-1;st.rerun()
+  with col2:
+   if st.button('Next ▶',disabled=step>=len(stages)-1,use_container_width=True):st.session_state[key]=step+1;st.rerun()
+  with col3:
+   new=st.select_slider('Recorded stage',options=list(range(len(stages))),value=step,format_func=lambda i:f'{i+1:02d} — {stages[i]["label"]}')
+   if new!=step:st.session_state[key]=new;st.rerun()
+  with col4:st.metric('Stage',f'{step+1}/{len(stages)}')
+  st.progress((step+1)/len(stages))
+  st.write('**Recorded routing:** '+route_text(c))
+  if c['route_family']=='LOCAL_SPECIALISTS':st.caption('SP02–SP07 form parallel analytical branches; the stage navigator presents their saved outputs sequentially for inspection.')
+  active=stages[step];item=c['stage_data'][active['key']]
+  st.subheader(f"{active['agent']}  /  {active['label']}")
+  if active['key']=='sp01_evidence_cycle_1':
+   st.write('SP01 retrieved the following source records before localizing the suspected incident:')
+   for name,v in item.items():st.markdown(f"• **{name}** · `{v.get('evidence_id')}`")
+  elif active['key']=='supervisor_output':
+   st.markdown('**Final recorded decision**')
+   st.write(item.get('diagnosis') or 'No issue')
+   st.markdown('**Fault family:** '+pretty(item.get('root_cause_family')))
+   st.markdown('**Scope:** '+pretty(item.get('scope_class')))
+   data_field_sections(item,show_json=True)
+   st.divider()
+   render_kb_contribution(item)
+  else:
+   data_field_sections(item,show_json=True)
+  with st.expander('All recorded LangSmith nodes and timestamps'):
+   df=pd.DataFrame(c['observed_nodes'])[['name','run_type','depth','start_time','duration_seconds','status','total_tokens','total_cost']]
+   st.dataframe(df,hide_index=True,use_container_width=True,height=350)
 
 elif page=='Root Cause Analysis':
  heading('Root Cause Analysis','This is the recorded Supervisor conclusion, not an independently inferred or regenerated RCA.')
