@@ -1,6 +1,6 @@
 # Telecom AI Engineering — M05_06D Recorded Investigation Replay
 
-**Release:** V1.2 animated Guided Operations Demo (recorded offline replay) — October 2026  
+**Release:** V1.3 Visitor Experience & Measured Investigations (recorded offline replay) — October 2026  
 **Source project:** `module_5_telecom_ai`, Module 5, M05_06D  
 **Scope:** Nine recorded end-to-end 5G RAN accessibility investigations on **synthetic** network scenarios.
 
@@ -20,6 +20,43 @@ Seven sections:
 
 The network observed in each scenario is an **independent synthetic snapshot**; data from different case dates should **not** be interpreted as one continuous network trend.
 
+## V1.3 — Visitor Experience, Agent Presentation & Measured Outcomes
+
+**The landing page now explains the system before playback.** A short description, four-stage conceptual architecture and three trace-verified investigation-performance headlines introduce the solution. The architecture correctly shows the **Network Health & Localisation Agent (SP01) invoking two ML predictions and the Network Overview / Event telemetry tools**. ML is supporting probabilistic evidence, not an independent autonomous monitoring agent.
+
+| Demonstrated milestone | Based on the included original runs | Boundary |
+|---|---:|---|
+| **Fault / network-health assessment in under 1 minute** | **9 of 9** SP01 runs, maximum **24.3 seconds** | SP01 top-level chain completion, healthy control included |
+| **Affected fault scope localised within 2 minutes** | **8 of 8** recorded incident runs | SP01-supported scope/handover, **not** a separately timed specialist localisation milestone |
+| **Root cause assessment in under 5 minutes** | **8 of 8** incident runs; longest **4m 33s** | LangGraph root end-to-end duration, includes specialist and Supervisor stages |
+
+These are **selected synthetic-network investigation experiments** and do **not** prove a production MTTR reduction, guaranteed SLA or cost saving. The app computes its headline pass counts from the included cases rather than keeping benchmark numbers disconnected from source records. The healthy-to-incident storyline remains two independent traces.
+
+**Presentation improvements:**
+
+- **Scenario Library:** the selected scenario is now plainly visible in an on-page dropdown, preselected to M05I0003 (Single-site radio resource congestion) for new sessions. Selectors on other pages remain available in the sidebar.
+- **Public agent naming:** the interface and animated diagram use descriptive engineering names, such as *Radio Analysis Agent*, *CU-Domain & Boundary Analysis Agent* and *RCA Supervisor & Evidence Synthesis*. Source identifiers (`SP01`–`SP08`) remain available for engineer-level correlation and exact evidence references.
+- **Animation theatre:** the recorded routing diagram and the selected input, action and outcome panels appear together in a compact two-column desktop layout. A detailed stage expander and existing engineer drill-down preserve complete saved data. Smaller screens can still require scrolling; verify layout in the deployed browser.
+- **Gentler playback:** the default guided playback interval is **7 seconds per presentation beat**, adjustable to 3/5/7/10/14 seconds. Handover, finding, decision, RAG and report beats remain on screen **1.5× longer** to improve comprehension. This is *presentation timing*, entirely separate from trace timing.
+- **Human-readable durations:** RCA summary durations and the portfolio show minutes-and-seconds formatting when appropriate (`2m 48s`, not `168 s`).
+- **RCA specialist summary:** displays each participating agent's mission, **wall-clock execution duration**, separately summed **recorded LLM inference spans**, and the names of recorded tool outputs. Parallel agent durations are not additive; individual inference spans are not whole-agent elapsed durations.
+- **Closing value:** frames potential operational benefits—faster evidence correlation, consistent causal assessments and wider access to specialist expertise—without implying measured production savings or automated remediation.
+
+The demonstration is still fully offline. It performs **no** new ML inference, LLM generation, RAG retrieval, network calls, telemetry polls or network modification. Model weights are not shipped. The exact same 9 cases and 126 evidence files from V1.2 remain in `data/` without changes.
+
+**Updating GitHub / Streamlit Community Cloud:** extract the ZIP; copy its `Telecom_AI_Replay_V1` contents over your existing `telecom-ai-engineering-demo` project, retaining the `.git` folder. Run:
+
+```powershell
+git add .
+git status
+git commit -m "Enhance Telecom AI demo visitor experience V1.3"
+git push origin main
+```
+
+Keep the same `app.py` entry point; no additional Python dependency or API key is required. Full source/data checks: `python -m pytest -q tests`. **Automated source and Streamlit-stub checks passed; live browser interaction and mobile layout are not confirmed by these tests.**
+
+---
+
 ## Run on your own machine
 
 Requirements: Python 3.11+ and access to pip install packages.
@@ -37,7 +74,7 @@ streamlit run app.py
 
 Open the local URL shown by Streamlit, normally `http://localhost:8501`. No secrets configuration is required. The demonstration displays **completed** runs; it never reruns the costly notebooks. On Windows, you may alternatively run `./run_windows.ps1` from PowerShell to set up the venv and launch the app. On Linux/macOS, use `./run_unix.sh`.
 
-**Note:** The development environment used to package the project does not have Streamlit installed and has no external package access. The Python/data contract tests passed; an actual interactive browser startup has **not** been run here. Run the command above on a computer with Streamlit to complete UI acceptance testing.
+**Note:** Streamlit is not installed in the packaging environment. The Python/data contract and Streamlit-stub tests passed, but actual interactive browser acceptance testing has not been run here. After deployment, verify animation pacing, panel visibility, the Scenario Library selector and agent drill-down on your target screen size.
 
 ## Source selection and corrections
 
@@ -92,6 +129,7 @@ Tests check selected corrections, scenario identities, all source evidence refer
 ```text
 Telecom_AI_Replay_V1/
   app.py                    # Read-only Streamlit UI, guided and full replay
+  presentation.py           # Public agent names, per-agent timing, benchmark audit
   operational_demo.py       # Pure trace-backed guided storyline and exact timing helpers
   storyboard.py             # Animated LangGraph routing and beat construction
   requirements.txt

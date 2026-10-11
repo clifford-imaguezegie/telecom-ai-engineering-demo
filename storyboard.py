@@ -7,15 +7,15 @@ re-execution or a claim that parallel agents ran sequentially.
 from html import escape
 
 AGENT_ROLES = {
-    'SP01': 'Network Scan & Localization',
+    'SP01': 'Network Health & Localisation',
     'SP02': 'Accessibility KPI Analysis',
     'SP03': 'Cell & Peer Comparison',
     'SP04': 'Radio Analysis',
     'SP05': 'Processing Analysis',
     'SP06': 'Transport Analysis',
     'SP07': 'Configuration Analysis',
-    'SP08': 'CU Domain & Boundary Analysis',
-    'SUPERVISOR': 'Supervisor / Correlation',
+    'SP08': 'CU-Domain & Boundary Analysis',
+    'SUPERVISOR': 'RCA Supervisor & Evidence Synthesis',
     'LOCAL_JOIN': 'Specialist Findings Join',
     'CU_JOIN': 'CU Findings Join',
     'DIRECT_JOIN': 'Healthy-Case Direct Join',
@@ -24,9 +24,29 @@ AGENT_ROLES = {
 
 
 def label_tool(name):
-    if name == 'supervisor_private_knowledge_search':
-        return 'Curated Telecom Knowledge Base Search'
-    return name.replace('_', ' ').title()
+    """Readable public tool names; source names are retained for exact trace links."""
+    labels = {
+        'supervisor_private_knowledge_search': 'Curated Telecom Knowledge Base Search',
+        'ml_model_metadata': 'ML Model Metadata',
+        'ml_specialist_summary': 'ML Fault-Family Prediction',
+        'ml_scope_probabilities': 'ML Affected-Scope Prediction',
+        'ml_fault_family_probabilities': 'ML Fault-Family Probabilities',
+        'ml_feature_drivers': 'ML Feature Drivers',
+        'telemetry_topology': 'Network Topology Telemetry',
+        'telemetry_network_overview': 'Network Overview Telemetry',
+        'telemetry_events': 'Network Event Telemetry',
+        'telemetry_kpi_components': 'Accessibility KPI Components',
+        'telemetry_kpis': 'Accessibility KPIs',
+        'telemetry_peer_cells': 'Peer-Cell Telemetry',
+        'telemetry_measurements': 'Cell Measurements',
+        'telemetry_radio_state': 'Radio-State Telemetry',
+        'telemetry_resource_state': 'Radio-Resource Telemetry',
+        'telemetry_processing_state': 'Processing-State Telemetry',
+        'telemetry_transport_state': 'Transport-State Telemetry',
+        'telemetry_configuration': 'Configuration Telemetry',
+        'telemetry_cu_domain_state': 'CU-Domain State Telemetry',
+    }
+    return labels.get(name, name.replace('_', ' ').title())
 
 
 def summary_text(v, limit=460):
@@ -122,11 +142,11 @@ def build_story(c, evidence_loader):
             window=c.get('scenario_window') or {}
             add('SP01','scan','Network scan initiated',
                 f"Investigation: {window.get('task','5G RAN accessibility')} | Observation window: {window.get('window_start_utc','—')} to {window.get('window_end_utc','—')}",
-                'SP01 reviews scenario scope and available topology before interpreting the KPI evidence.',
+                'Network Health & Localisation Agent reviews topology and scope before interpreting KPI evidence.',
                 summary_text(d.get('rationale') or d.get('observations') or 'No affected scope established yet.'),i,'SP01 localization 1 (recorded)')
             tools_for('SP01',i,include_pre_run=True)
         elif key=='sp01_evidence_cycle_1':
-            add('SP01','scan','SP01 scans recorded network measurements',
+            add('SP01','scan','Network Health Agent scans recorded measurements',
                 '15-minute PM KPIs, event observations and supporting ML outputs',
                 'Gather the recorded deterministic network evidence and supporting probabilistic features.',
                 f"The selected scenario has {c.get('data_inventory',{}).get('telemetry_rows',0):,} recorded telemetry rows in its frozen source inventory.",i,'SP01 evidence cycle 1 (recorded)')
@@ -136,16 +156,16 @@ def build_story(c, evidence_loader):
             scope=d.get('candidate_scope') or {}
             observations=d.get('observations') or []
             add('SP01','decision','Issue identified and localized' if material else 'No material issue found',
-                'SP01 has reviewed network overview / ML and event evidence',
-                f"SP01 recorded material degradation: {'YES' if material else 'NO'}; candidate scope: {scope.get('supported_scope_class') or 'not identified'}.",
+                'Network Health & Localisation Agent has assessed the ML predictions, network overview and event evidence',
+                f"Localisation assessment — material degradation: {'YES' if material else 'NO'}; candidate scope: {scope.get('supported_scope_class') or 'not identified'}.",
                 summary_text(observations or d.get('rationale') or 'No sustained material degradation established.',700),i,'SP01 localization 2 (recorded)')
         elif key=='sp01_output':
             outcome=d.get('assessment_outcome') or {}
             scope=d.get('scope') or {}
             branch=c['route_family']
-            target=('SP02–SP07 analytical branch' if branch=='LOCAL_SPECIALISTS' else 'SP08 CU-domain specialist' if branch=='CU_SPECIALIST' else 'direct Supervisor route')
-            add('SP01','handover','SP01 hands over investigation',
-                f"SP01 assessment: {outcome.get('conclusion','—')} | Scope class: {scope.get('supported_scope_class','—')}",
+            target=('parallel specialist investigation (KPI, cell/peer, radio, processing, transport, configuration)' if branch=='LOCAL_SPECIALISTS' else 'CU-Domain & Boundary Analysis Agent' if branch=='CU_SPECIALIST' else 'direct RCA Supervisor review')
+            add('SP01','handover','Localisation Agent dispatches investigation',
+                f"Localisation assessment: {outcome.get('conclusion','—')} | Scope class: {scope.get('supported_scope_class','—')}",
                 f"Recorded routing decision: {target}.",
                 summary_text((d.get('assessment_feedback') or {}).get('supporting_observations') or d.get('observations'),700),i,'SP01 final output (recorded)')
         elif s['kind']=='specialist':
@@ -153,12 +173,12 @@ def build_story(c, evidence_loader):
             assess=d.get('assessment_feedback') or {}
             outcome=d.get('assessment_outcome') or {}
             focus=d.get('investigated_scope') or {}
-            add(agent,'dispatch',f'Investigation handed to {agent} • {role}',
+            add(agent,'dispatch',f'Investigation handed to {role} Agent',
                 f"Handover from SP01: {summary_text(focus,200) if not isinstance(focus,dict) else str(focus.get('supported_scope_class') or focus.get('scope_class') or 'Recorded scoped investigation')}",
-                f'{agent} begins its saved {role.lower()} review.',
+                f'{role} Agent begins its recorded evidence review.',
                 summary_text(outcome.get('brief_update') or 'Reviewing the relevant tool evidence.',700),i,f'{agent} specialist output (recorded)')
             tools_for(agent,i)
-            add(agent,'feedback',f'{agent} reports analytical findings',
+            add(agent,'feedback',f'{role} Agent reports analytical findings',
                 'Recorded telemetry and investigation scope reviewed by this specialist',
                 f"Specialist assessment: {outcome.get('conclusion','—')} | Status: {d.get('status','—')}",
                 summary_text(assess.get('summary') or outcome.get('brief_update') or assess.get('supporting_observations') or d.get('positive_metrics'),700),i,f'{agent} assessment_feedback / assessment_outcome (recorded)')
@@ -260,9 +280,15 @@ def workflow_svg(route_family, story, active_index):
         if agent==current:
             parts.append(f'<rect x="{x-r-5}" y="{y-27}" width="{2*r+10}" height="56" rx="15" fill="none" stroke="#46e6b5" stroke-width="2" class="activepulse"/>')
         parts.append(f'<rect x="{x-r}" y="{y-22}" width="{2*r}" height="{height}" rx="10" fill="{fill}" stroke="{stroke}" stroke-width="2"/>')
-        name={'SP01':'SP01','SUPERVISOR':'SUPERVISOR','LOCAL_JOIN':'LOCAL JOIN','CU_JOIN':'CU JOIN','DIRECT_JOIN':'DIRECT JOIN','FINAL':'FINAL REPORT'}.get(agent,agent)
-        sub={'SP01':'Network scan','SUPERVISOR':'Evidence synthesis','FINAL':'Recorded result','LOCAL_JOIN':'Parallel merge','CU_JOIN':'CU handover','DIRECT_JOIN':'No incident','SP02':'Accessibility KPI','SP03':'Cell & peers','SP04':'Radio analysis','SP05':'Processing','SP06':'Transport','SP07':'Configuration','SP08':'CU & boundary'}.get(agent,'')
-        parts.append(f'<text x="{x}" y="{y-4}" font-size="13" text-anchor="middle" font-weight="700" fill="#eaf6ff">{escape(name)}</text>')
+        # Public-friendly role names; original SP identifiers remain visible in small text.
+        name={'SP01':'Network Health','SP02':'Accessibility KPI','SP03':'Cell & Peer','SP04':'Radio Analysis',
+              'SP05':'Processing','SP06':'Transport','SP07':'Configuration','SP08':'CU & Boundary',
+              'SUPERVISOR':'RCA Supervisor','LOCAL_JOIN':'Evidence Join','CU_JOIN':'CU Join',
+              'DIRECT_JOIN':'Direct Review','FINAL':'Final RCA'}.get(agent,agent)
+        sub={'SP01':'SP01 · Localisation','SUPERVISOR':'SUPERVISOR · synthesis', 'FINAL':'Recorded report',
+             'LOCAL_JOIN':'Parallel branches','CU_JOIN':'CU branch','DIRECT_JOIN':'Healthy control',
+             'SP02':'SP02','SP03':'SP03','SP04':'SP04','SP05':'SP05','SP06':'SP06','SP07':'SP07','SP08':'SP08'}.get(agent,'')
+        parts.append(f'<text x="{x}" y="{y-4}" font-size="12.5" text-anchor="middle" font-weight="700" fill="#eaf6ff">{escape(name)}</text>')
         parts.append(f'<text x="{x}" y="{y+11}" font-size="10" text-anchor="middle" fill="#a8cddd">{escape(sub)}</text>')
         if agent==current:
             parts.append(f'<text x="{x}" y="{y+46}" font-size="10" text-anchor="middle" fill="#51e8c2" font-weight="bold">{status}</text>')
