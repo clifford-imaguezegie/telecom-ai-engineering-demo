@@ -7,7 +7,7 @@ import gzip
 import json
 import re
 import time
-from storyboard import AGENT_ROLES, build_story, workflow_svg, evidence_preview
+from storyboard import AGENT_ROLES, build_story, workflow_svg, workflow_overview_html, evidence_preview
 from operational_demo import (guided_sequence, executive_sequence, get_run_durations, event_trace_offset,
                               format_clock, sp01_tools_unlocked, available_agents)
 from html import escape
@@ -218,8 +218,10 @@ def render_rca_outcome(case):
     with x:
         st.markdown('**Key supporting observations**')
         for v in (su.get('supporting_evidence') or [])[:3]:st.markdown('• '+str(v))
-        st.markdown('**Weakened competing explanations**')
-        for v in (su.get('contradictory_evidence') or [])[:2]:st.markdown('• '+str(v))
+        alternatives=su.get('contradictory_evidence') or []
+        if alternatives:
+            st.markdown('**Weakened competing explanations**')
+            for v in alternatives[:2]:st.markdown('• '+str(v))
     with y:
         st.markdown('**Uncertainty and evidence gaps**')
         for v in (su.get('residual_uncertainty') or ['No further limitation recorded in the Supervisor final output.'])[:3]:st.markdown('• '+str(v))
@@ -403,7 +405,7 @@ def cinematic_replay(sid):
  st.progress((idx+1)/len(beats),text=f'PLAYBACK {idx+1} / {len(beats)}  •  {"PLAYING" if player["playing"] else "PAUSED"}  •  {agent_label(beat["agent"])}')
  embed_workflow_html(workflow_svg(c['route_family'],beats,idx),height=250,scrolling=False)
  with st.expander('View complete recorded agent route',expanded=False):
-  embed_workflow_html(workflow_svg(c['route_family'],beats,idx,mode='overview'),height=405,scrolling=False)
+  st.html(workflow_overview_html(beats,idx))
  st.markdown(f'#### {idx+1:02d} — {beat["title"]}')
  panels=st.columns([1,1,1.12])
  with panels[0]:
@@ -613,7 +615,7 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
         active_index=next(i for i,b in enumerate(case_beats) if b['sequence']==beat['sequence'])
         embed_workflow_html(workflow_svg(case['route_family'],case_beats,active_index),height=250,scrolling=False)
         with st.expander('View complete recorded agent route',expanded=False):
-            embed_workflow_html(workflow_svg(case['route_family'],case_beats,active_index,mode='overview'),height=405,scrolling=False)
+            st.html(workflow_overview_html(case_beats,active_index))
     with live:
         st.markdown(f'**{escape(agent_label(beat["agent"]))}**')
         st.caption(f'{beat["title"]} · Stage {idx+1}/{len(timeline)}')
@@ -653,26 +655,38 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
     st.caption('Two clocks: presentation timer = playback viewing time; SP01/end-to-end/event offset = measured original LangSmith times. No new ML inference, telemetry polling, agent execution or RAG search occurs. Each case is a separate synthetic-network snapshot.')
 
 
-# Sidebar state
+# Scenario selection is persistent business state, not ephemeral widget state.
+# Streamlit may delete a widget key when it disappears from a page.
 manifest=load_manifest()
+_valid_scenarios=manifest['scenario_order']
+_default_scenario='M05I0003'
+
+def sync_scenario_from(widget_key):
+    candidate=st.session_state.get(widget_key)
+    if candidate in _valid_scenarios:
+        st.session_state['selected_scenario']=candidate
+
+def sync_scenario_picker(widget_key):
+    # Set widget values before drawing them, using the persistent scenario ID.
+    canonical=st.session_state['selected_scenario']
+    if st.session_state.get(widget_key)!=canonical:
+        st.session_state[widget_key]=canonical
+
 st.sidebar.markdown('### ◈ TREAD AI')
 st.sidebar.caption('Telecom AI Engineering Platform')
 st.sidebar.divider()
 if 'requested_page' in st.session_state:
- st.session_state['nav_page']=st.session_state.pop('requested_page')
-if 'selected_scenario' not in st.session_state:st.session_state['selected_scenario']='M05I0003'
-if 'nav_page' not in st.session_state:st.session_state['nav_page']='Platform Overview'
+    st.session_state['nav_page']=st.session_state.pop('requested_page')
+if st.session_state.get('selected_scenario') not in _valid_scenarios:
+    st.session_state['selected_scenario']=_default_scenario
+if 'nav_page' not in st.session_state:
+    st.session_state['nav_page']='Platform Overview'
 page=st.sidebar.radio('Workspace',PAGES,key='nav_page')
-opts={x:next(c['title'] for c in manifest['cases'] if c['scenario_id']==x) for x in manifest['scenario_order']}
-if page=='Scenario Library':
- if st.session_state.get('_last_page')!='Scenario Library':
-  st.session_state['library_case_selection']=st.session_state['selected_scenario']
- st.sidebar.info('Choose a scenario using the dropdown on the Scenario Library page.')
- sid=st.session_state['library_case_selection']
- st.session_state['selected_scenario']=sid
-else:
- sid=st.sidebar.selectbox('Select scenario ▾',options=manifest['scenario_order'],format_func=lambda x:opts[x],key='selected_scenario')
-st.session_state['_last_page']=page
+opts={x:next(c['title'] for c in manifest['cases'] if c['scenario_id']==x) for x in _valid_scenarios}
+sync_scenario_picker('sidebar_scenario_picker')
+st.sidebar.selectbox('Select scenario ▾',options=_valid_scenarios,format_func=lambda x:opts[x],
+                     key='sidebar_scenario_picker',on_change=sync_scenario_from,args=('sidebar_scenario_picker',))
+sid=st.session_state['selected_scenario']
 c=load_case(sid)
 st.sidebar.divider()
 st.sidebar.caption('RECORDED INVESTIGATION DEMO')
@@ -749,8 +763,10 @@ elif page=='Network Overview':
 
 elif page=='Scenario Library':
  heading('Scenario Library','Choose one of the nine completed LangSmith investigations. All incident classifications below come from recorded Supervisor outputs.')
- st.selectbox('Choose a recorded investigation',options=manifest['scenario_order'],
-     format_func=lambda x:opts[x],key='library_case_selection')
+ sync_scenario_picker('library_case_selection')
+ st.selectbox('Choose a recorded investigation',options=_valid_scenarios,
+     format_func=lambda x:opts[x],key='library_case_selection',
+     on_change=sync_scenario_from,args=('library_case_selection',))
  st.caption('One scenario is selected by default. Use the dropdown above to explore any of the nine completed cases.')
  left,right=st.columns([1,1.6]);d=c['derived_display']
  with left:

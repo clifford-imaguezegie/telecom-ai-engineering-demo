@@ -265,3 +265,7 @@ python -m pytest -q tests
 ## V1.4.1 — Readable animated workflow
 
 The Guided Operations Demo and Agentic Replay now highlight a larger **Previous → Current → Next** recorded agent transition instead of shrinking the complete route into a miniature diagram. The complete recorded route is accessible in an expander. Recorded data, timings, investigation order, ML outputs, RCA conclusions, and playback controls are unchanged. See `V1_4_1_RELEASE_NOTES.md`.
+
+### V1.4.2 follow-up browser review corrections
+
+V1.4.2 fixes cross-page scenario synchronisation, replaces the fixed-height full-route iframe with auto-sized HTML, and hides empty alternatives headings in the RCA summary. See `V1_4_2_RELEASE_NOTES.md`. All historical investigation evidence is preserved.

@@ -26,6 +26,7 @@ class MockStreamlit(ModuleType):
  def fragment(self,**kwargs):return lambda fn:fn
  def set_page_config(self,**kwargs):pass
  def markdown(self,*args,**kwargs):pass
+ def html(self,*args,**kwargs):pass
  def subheader(self,*args,**kwargs):pass
  def caption(self,*args,**kwargs):pass
  def divider(self,*args,**kwargs):pass
@@ -52,7 +53,9 @@ class MockStreamlit(ModuleType):
   if label=='Visitor experience' and getattr(self,'full_engineering',False):return options[1]
   return options[0]
  def selectbox(self,label,options,**kwargs):
-  if label in {'Scenario','Select scenario ▾'}:return self.session_state['selected_scenario']
+  key=kwargs.get('key')
+  if key in self.session_state:
+   return self.session_state[key]
   return options[kwargs.get('index',0)]
  def select_slider(self,label,options,**kwargs):return kwargs.get('value',options[0])
  def slider(self,label,**kwargs):return self.session_state.get(kwargs.get('key'),kwargs.get('value',0))

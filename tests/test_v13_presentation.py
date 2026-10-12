@@ -154,4 +154,6 @@ def test_scenario_dropdown_is_high_contrast_and_preselected():
     assert '[data-baseweb="select"] > div' in source
     assert 'border:2px solid #80cbd0' in source
     assert "'Select scenario ▾'" in source
-    assert "st.session_state['selected_scenario']='M05I0003'" in source
+    assert "_default_scenario='M05I0003'" in source
+    assert "key='sidebar_scenario_picker'" in source
+    assert "on_change=sync_scenario_from" in source

@@ -352,9 +352,53 @@ def workflow_svg(route_family, story, active_index, mode='focus'):
         prev_agent=route[selected-1] if selected>0 else None
         next_agent=route[selected+1] if selected+1<len(route) else None
         body=(f'<div class="top"><span class="overline">RECORDED AGENT WORKFLOW</span>'
-              f'<span class="step-count">Agent {selected+1} of {len(route)}</span></div>'
+              f'<span class="step-count">Stage {selected+1} of {len(route)}</span></div>'
               f'<div class="focus-flow">{tile(prev_agent,"previous")}{arrow()}'
               f'{tile(current,"current")}{arrow()}{tile(next_agent,"next")}</div>'
               f'<div class="bottom"><span>{escape(route_kind)}</span>'
               '<span>Original recorded LangGraph · not live execution</span></div>')
     return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+common+'</head><body><div class="frame">'+body+'</div></body></html>'
+
+def workflow_overview_html(story, active_index):
+    """Full recorded route for Streamlit st.html; auto height, no clipping iframe.
+
+    The HTML/CSS is scoped to the route container, and every label is escaped.
+    Both playback modes use the same saved story events and route order.
+    """
+    if not story or not 0 <= active_index < len(story):
+        raise ValueError('A valid recorded presentation beat is required')
+    route = _recorded_route(story)
+    active = story[active_index]['agent']
+    visited = {event['agent'] for event in story[:active_index]}
+    labels = {'DIRECT_JOIN': 'Direct Supervisor Review',
+              'LOCAL_JOIN': 'Specialist Evidence Consolidation',
+              'CU_JOIN': 'CU Evidence Consolidation'}
+    items = []
+    for i, agent in enumerate(route):
+        state = 'active' if agent == active else ('done' if agent in visited else 'queued')
+        role = escape(labels.get(agent, AGENT_ROLES[agent]))
+        items.append(f'<div class="tread-route-item {state}" role="listitem" '
+                     f'aria-label="Stage {i+1}: {role}">'
+                     f'<span class="tread-route-order">{i+1:02d}</span><span>{role}</span></div>')
+    style = '''<style>
+    .tread-route-panel{box-sizing:border-box;border:1px solid #416378;border-radius:14px;
+      padding:14px;background:#102b40;color:#e8f5fb;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+    .tread-route-panel *{box-sizing:border-box}
+    .tread-route-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+      gap:9px;margin-bottom:12px;color:#cae7ef;font-size:12px;font-weight:750}
+    .tread-route-heading strong{color:#95c7d6;letter-spacing:.08em}
+    .tread-route-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,195px),1fr));gap:8px}
+    .tread-route-item{display:flex;align-items:center;gap:9px;min-width:0;min-height:68px;
+      padding:10px 11px;background:#1a374a;border:1px solid #587d8e;border-radius:9px;
+      color:#f0fbff;font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+    .tread-route-item.done{border-color:#3b9f91}
+    .tread-route-item.active{border:2px solid #61e9c9;background:#175264;font-weight:780}
+    .tread-route-order{color:#a9d6e4;font-size:12px;font-weight:800;flex-shrink:0}
+    .tread-route-foot{margin-top:12px;color:#b6d5e2;font-size:11px;line-height:1.45}
+    </style>'''
+    body = (f'<div class="tread-route-panel"><div class="tread-route-heading">'
+            f'<strong>FULL RECORDED ROUTE</strong><span>{len(route)} recorded stages</span></div>'
+            f'<div class="tread-route-grid" role="list">{"".join(items)}</div>'
+            '<div class="tread-route-foot">Recorded LangGraph order · sequential specialist execution '
+            'where applicable · not a live run</div></div>')
+    return style + body
