@@ -49,12 +49,13 @@ class MockStreamlit(ModuleType):
  def radio(self,label,options,**kwargs):
   if label=='Workspace':return self.session_state['nav_page']
   if label=='Replay mode' and getattr(self,'inspect_legacy',False):return options[1]
+  if label=='Visitor experience' and getattr(self,'full_engineering',False):return options[1]
   return options[0]
  def selectbox(self,label,options,**kwargs):
   if label in {'Scenario','Select scenario ▾'}:return self.session_state['selected_scenario']
   return options[kwargs.get('index',0)]
  def select_slider(self,label,options,**kwargs):return kwargs.get('value',options[0])
- def slider(self,label,**kwargs):return kwargs.get('value',0)
+ def slider(self,label,**kwargs):return self.session_state.get(kwargs.get('key'),kwargs.get('value',0))
 
 @pytest.mark.parametrize('sid',['M05I0017','M05I0002','M05I0005','M05I0016'])
 @pytest.mark.parametrize('page',PAGES)
@@ -123,6 +124,7 @@ def test_guided_demo_progressively_reveals_sp01_model_and_telemetry(monkeypatch)
              item['beat']['source'].endswith(' · telemetry_network_overview'))
  def page_at(index):
   stub=MockStreamlit('Guided Operations Demo','M05I0005')
+  stub.full_engineering=True
   stub.session_state['ops_player_M05I0005_True']={
    'index':index,'playing':False,'seconds':3,'last_tick':time.monotonic(),
    'carry':0.,'presentation_elapsed':0.

@@ -1,7 +1,19 @@
-# Telecom AI Engineering — M05_06D Recorded Investigation Replay
+# TREAD AI — Telecom AI Engineering Platform
 
-**Release:** V1.3.1 Visitor Experience Hotfix (recorded offline replay) — October 2026  
-**Source project:** `module_5_telecom_ai`, Module 5, M05_06D  
+## V1.4 — External visitor experience and recorded-execution integrity
+
+- **Branding:** Public interface and browser tab use TREAD AI; internal module numbers and trace IDs are retained only for provenance and source-code linkage.
+- **Observed orchestration:** All four cell/site incident recordings execute SP02 through SP07 **sequentially**. Parallel execution was the original engineering objective but was deferred because large payloads caused freezes. The replay graph, routing descriptions, timing notes and README reflect the recorded order, without altering underlying trace data.
+- **Two experiences:** A concise executive presentation (~84–96 seconds at 6 seconds per frame, scenario dependent) and the complete recorded engineering playback. Both use one source of original compressed evidence and allow investigation drill-down.
+- **RCA comprehension:** A compact source-backed conclusion, scope and recorded limitations appear ahead of detailed Supervisor evidence. The detailed report remains accessible.
+- **Playback and presentation:** Stable slider identifiers, compact evidence cards, longer engineer pacing, improved readable labels, and uniquely labelled evidence selector entries. Interactive browser testing remains required after each Streamlit deployment.
+- **Evaluation:** Post-run aggregate scores remain separate from operational performance. Full field-level grading rubrics or accurate token accounting must not be inferred from the packaged summary if absent.
+- **Scope:** Replay only; no live polling, model serving, new LangGraph execution, RAG retrieval, network remediation or production MTTR claim.
+
+# TREAD AI — Telecom AI Engineering Platform · Recorded Investigation Replay
+
+**Release:** V1.4 Executive & Engineering Showcase (recorded offline replay) — 12 October 2026  
+**Source project:** `module_5_telecom_ai`, internal project module, M05_06D  
 **Scope:** Nine recorded end-to-end 5G RAN accessibility investigations on **synthetic** network scenarios.
 
 ## What this delivers
@@ -14,7 +26,7 @@ Eight sections:
 2. **Guided Operations Demo** — narrated health assessment → separate incident investigation with playback controls, dual ML/telemetry reveal, incident routing, accurate original runtime indicators, and agent-level evidence drill-down.
 3. **Network Overview** — recorded network topology, scenario-level KPI trends, portfolio of cases, and selected-case Curated Telecom Knowledge Base query.
 4. **Scenario Library** — select a completed investigation and see its recorded scope, fault family, and outcome.
-5. **Agentic Replay** — step through saved SP01 localization, specialist analyses, supervisor correlation and final report, including the Supervisor’s explicit RAG contribution record. The local SP02–SP07 branch ran in parallel, but its saved outputs are presented sequentially for easier review.
+5. **Agentic Replay** — step through saved SP01 localization, specialist analyses, supervisor correlation and final report, including the Supervisor’s explicit RAG contribution record. The recorded SP02–SP07 specialist runs executed sequentially to maintain stability with large input payloads; concurrent execution is a deferred engineering optimisation.
 6. **Root Cause Analysis** — preserved supervisor finding, supporting evidence, alternatives, residual uncertainty, recommendations, and the knowledge-informed query → mechanism → hypothesis → discriminating-observation reasoning chain.
 7. **Engineering Evidence** — inspect 15-minute formal accessibility KPIs, affected-cell series, and recorded operational tool measurements with source evidence identifiers.
 8. **Evaluation & Performance** — recorded trace duration, individual run-node timings, trace provenance, and saved post-run evaluation for the matching execution, separated from operational evidence.
@@ -25,12 +37,12 @@ The network observed in each scenario is an **independent synthetic snapshot**; 
 This hotfix addresses user acceptance findings from the hosted V1.3 application without changing the recorded data or investigation results:
 
 - **Scenario selector contrast:** replaces the global white-text rule that made the sidebar scenario selection invisible on a pale control; the selected value and dropdown chevron are now styled with a strong contrasting background and border. The selector is explicitly labelled **Select scenario ▾**.
-- **Dedicated, visible Platform Overview landing page:** introduces the business purpose, 9/9 and 8/8 recorded experimental results, and a readable architecture that begins with the Network Health & Localisation Agent invoking the two ML and two telemetry services. It explains incident/healthy routing, parallel specialists, the Curated Telecom Knowledge Base and RCA Supervisor. A prominent button starts the animation.
-- **Playback visibility:** the Guided Operations Demo keeps the brief introduction and outcome headlines but links back to the detailed architecture page; this avoids pushing the animation far below the fold.
+- **Dedicated, visible Platform Overview landing page:** introduces the business purpose, 9/9 and 8/8 recorded experimental results, and a readable architecture that begins with the Network Health & Localisation Agent invoking the two ML and two telemetry services. It explains incident/healthy routing, sequential specialists, the Curated Telecom Knowledge Base and RCA Supervisor. A prominent button starts the animation.
+- **Playback visibility (V1.3.1):** the Guided Operations Demo links back to the detailed architecture page. In V1.4, repetitive introduction cards are removed above the player for improved visibility.
 - **Duplicate widget prevention:** removes a duplicate engineer drill-down block that rendered the same keyed Streamlit selectors twice and could raise a duplicate-key runtime exception.
 - **Visitor-friendly agent labels:** the main playback and routing diagram now display meaningful role names rather than raw `SP01`–`SP08` codes. Original IDs remain accessible in technical evidence and trace provenance for engineering users.
 
-**Verification:** 142 local automated checks passed, including a regression test enforcing exactly one drill-down render call. The environment has not performed real browser QA; verify the hosted app after redeployment.
+**Historical V1.3.1 validation:** 142 local automated checks passed. This release uses a larger regression suite. Live browser acceptance remains required after redeployment.
 
 ## V1.3 — Visitor Experience, Agent Presentation & Measured Outcomes
 
@@ -49,9 +61,9 @@ These are **selected synthetic-network investigation experiments** and do **not*
 - **Scenario Library:** the selected scenario is now plainly visible in an on-page dropdown, preselected to M05I0003 (Single-site radio resource congestion) for new sessions. Selectors on other pages remain available in the sidebar.
 - **Public agent naming:** the interface and animated diagram use descriptive engineering names, such as *Radio Analysis Agent*, *CU-Domain & Boundary Analysis Agent* and *RCA Supervisor & Evidence Synthesis*. Source identifiers (`SP01`–`SP08`) remain available for engineer-level correlation and exact evidence references.
 - **Animation theatre:** the recorded routing diagram and the selected input, action and outcome panels appear together in a compact two-column desktop layout. A detailed stage expander and existing engineer drill-down preserve complete saved data. Smaller screens can still require scrolling; verify layout in the deployed browser.
-- **Gentler playback:** the default guided playback interval is **7 seconds per presentation beat**, adjustable to 3/5/7/10/14 seconds. Handover, finding, decision, RAG and report beats remain on screen **1.5× longer** to improve comprehension. This is *presentation timing*, entirely separate from trace timing.
+- **Gentler playback:** the full engineering replay default interval is **7 seconds per presentation beat**, adjustable to 3/5/7/10/14 seconds. Handover, finding, decision, RAG and report beats remain on screen **1.5× longer** to improve comprehension. The executive cut defaults to **6 seconds per scene** and targets approximately 90 seconds. This is *presentation timing*, entirely separate from trace timing.
 - **Human-readable durations:** RCA summary durations and the portfolio show minutes-and-seconds formatting when appropriate (`2m 48s`, not `168 s`).
-- **RCA specialist summary:** displays each participating agent's mission, **wall-clock execution duration**, separately summed **recorded LLM inference spans**, and the names of recorded tool outputs. Parallel agent durations are not additive; individual inference spans are not whole-agent elapsed durations.
+- **RCA specialist summary:** displays each participating agent's mission, **wall-clock execution duration**, separately summed **recorded LLM inference spans**, and the names of recorded tool outputs. Individual agent durations correspond to recorded chain spans; individual inference spans are not whole-agent elapsed durations.
 - **Closing value:** frames potential operational benefits—faster evidence correlation, consistent causal assessments and wider access to specialist expertise—without implying measured production savings or automated remediation.
 
 The demonstration is still fully offline. It performs **no** new ML inference, LLM generation, RAG retrieval, network calls, telemetry polls or network modification. Model weights are not shipped. The exact same 9 cases and 126 evidence files from V1.2 remain in `data/` without changes.
@@ -183,7 +195,7 @@ not new network activity.
 - The **Recorded-stage inspector** toggle preserves detailed inspection of
   every original SP01, specialist and Supervisor stage and trace-node table.
 
-**Important engineering interpretation:** SP02–SP07 comprise a parallel
+**Important engineering interpretation:** SP02–SP07 comprise a sequential
 analytical branch in the original graph. For presentation clarity, the
 storyboard introduces each agent's recorded tools and conclusions one at a time.
 This is **presentation order, not proof of execution order or actual timings**.
@@ -206,13 +218,13 @@ The application now **opens on Guided Operations Demo**, a curated, cinematic pr
 ### Two presentation formats
 
 - **Healthy check → Separate incident (default):** Plays the completed M05I0017 healthy-control trace, including SP01's ML and telemetry evidence, its *no material issue* finding, and its direct Supervisor route. It then transitions to a **clearly marked, separate** recorded incident (selected in the sidebar), with new SP01 evidence, applicable specialist branches, knowledge-grounded Supervisor reasoning and final RCA. This is an editorial presentation of **two different runs**, not a claim that an incident occurred later in the same live network or that SP01 kept monitoring between runs.
-- **Incident investigation only:** Starts directly from the chosen incident. Select M05I0003 (site congestion) to showcase six parallel specialist branches, or M05I0005 (CU-CP processing pressure) to foreground dual ML outputs, CU-domain analysis and RAG-assisted competing-hypothesis discrimination. All eight incident scenarios are supported. Selecting M05I0017 gives the healthy-only replay.
+- **Incident investigation only:** Starts directly from the chosen incident. Select M05I0003 (site congestion) to showcase six sequential specialist branches, or M05I0005 (CU-CP processing pressure) to foreground dual ML outputs, CU-domain analysis and RAG-assisted competing-hypothesis discrimination. All eight incident scenarios are supported. Selecting M05I0017 gives the healthy-only replay.
 
 ### What appears during the guided animation
 
 1. **SP01 initiates the assessment** with recorded scenario context, topology and model metadata.
 2. **SP01 invokes four crucial outputs:** an ML fault-family prediction (WHAT), an ML scope prediction (WHERE), Network Overview Telemetry (15-minute PM measurements), and Network Event Telemetry. Each output remains *awaiting SP01* until its own recorded call appears in the playback. ML scores remain explicitly **uncalibrated supporting evidence**, not network truth.
-3. **SP01 assesses materiality and locality** and routes a material incident to SP02–SP07 (parallel cell/site analysis) or SP08 (CU/boundary analysis); the healthy control goes directly to the Supervisor. The workflow diagram reflects the selected recorded route.
+3. **SP01 assesses materiality and locality** and routes a material incident to SP02–SP07 (sequential cell/site analysis) or SP08 (CU/boundary analysis); the healthy control goes directly to the Supervisor. The workflow diagram reflects the selected recorded route.
 4. **Specialists receive the handover, call telemetry tools, and return feedback.** For pacing the guided version shows one representative tool response per specialist; the existing full Agentic Replay and the drill-down retain **all** original calls and stage outputs.
 5. **Supervisor assesses hypotheses and evidence.** Where the recorded knowledge-base contribution was used, its actual question, mechanism summary, hypothesis discrimination, confirming observations and limitations appear. Raw retrieved third-party passages remain excluded.
 6. **Final recorded verdict** presents the Supervisor's diagnosis and direct link to the full Root Cause Analysis page.
@@ -221,7 +233,7 @@ The application now **opens on Guided Operations Demo**, a curated, cinematic pr
 
 - **Play / Pause / Back / Next / Restart / Scrub** and adjustable cinematic pace (2, 3, 5 or 8 seconds per presentation beat).
 - **Presentation timer** measures elapsed viewing time. This is **not** the time needed by the original agents to complete their work.
-- **Recorded SP01 duration** comes directly from the SP01 LangSmith top-level chain. **Recorded end-to-end duration** comes from the original LangGraph root run. **Recorded event offset** is shown **only when the selected tool start or agent completion has an exact saved timestamp**; `—` otherwise. The presentation does not invent per-beat durations or imply parallel agents executed sequentially.
+- **Recorded SP01 duration** comes directly from the SP01 LangSmith top-level chain. **Recorded end-to-end duration** comes from the original LangGraph root run. **Recorded event offset** is shown **only when the selected tool start or agent completion has an exact saved timestamp**; `—` otherwise. The presentation does not invent per-beat durations, concurrency or elapsed runtime.
 - **Engineer drill-down** allows selection of any agent in the active recorded run, inspection of its analytical stages, representative outputs, relevant tool evidence identifiers and original execution timing. Detailed original KPI plots remain available in Engineering Evidence. No original source is edited.
 - **Independent scenario snapshots:** different scenarios have independent recorded observation windows. The static replay cannot claim recurring fresh scans at one-, two-, or five-minute intervals, even if the interface resembles an operational console. The PM data's 15-minute measurement interval is separate from the investigation execution time and the video pacing.
 

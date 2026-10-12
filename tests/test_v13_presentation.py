@@ -74,7 +74,7 @@ def test_workflow_uses_readable_roles_and_keeps_ids():
 
 
 def test_intro_and_close_show_on_landing_page(monkeypatch):
-    stub=MockStreamlit('Guided Operations Demo','M05I0003')
+    stub=MockStreamlit('Platform Overview','M05I0003')
     displayed=[]
     stub.markdown=lambda val,*a,**k:displayed.append(str(val))
     stub.caption=lambda val,*a,**k:displayed.append(str(val))
@@ -84,8 +84,7 @@ def test_intro_and_close_show_on_landing_page(monkeypatch):
     text='\n'.join(displayed)
     for phrase in ['What is this?', 'Demonstrated investigation milestones',
                    '9/9 recorded scenarios','8/8 incident scenarios',
-                   'The full solution architecture and design explanation are on **Platform Overview**',
-                   'From network data to actionable engineering intelligence',
+                                      'From network data to actionable engineering intelligence',
                    'not production SLAs']:
         assert phrase in text
 

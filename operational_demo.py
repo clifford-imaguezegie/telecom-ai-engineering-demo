@@ -133,3 +133,41 @@ def sp01_tools_unlocked(timeline, index):
 def available_agents(case):
     present = {s['agent'] for s in case.get('stages', [])}
     return [a for a in AGENT_ROLES if a in present]
+
+
+def executive_sequence(timeline):
+    """A ~90-second, 15-scene director's cut using only original recorded beats.
+
+    The full engineering sequence remains available without data duplication.
+    """
+    if not timeline:
+        return []
+    def choose(items, predicate):
+        return next((x for x in items if predicate(x['beat'])),None)
+    healthy=[x for x in timeline if x['act']=='HEALTH ASSESSMENT']
+    incidents=[x for x in timeline if x['act']=='INCIDENT INVESTIGATION']
+    chosen=[]
+    if healthy:
+        for kind,agent in [('scan','SP01'),('decision','SP01'),('report','FINAL')]:
+            pick=choose(healthy,lambda b:b['kind']==kind and b['agent']==agent)
+            if pick and pick not in chosen:chosen.append(pick)
+    if incidents:
+        # All SP01 ML + overview/event outputs are preserved in the short story.
+        order=[('scan','SP01'),('tool','ml_specialist_summary'),('tool','ml_scope_probabilities'),
+               ('tool','telemetry_network_overview'),('tool','telemetry_events'),
+               ('decision','SP01'),('handover','SP01')]
+        for kind,arg in order:
+            if kind=='tool':
+                pick=choose(incidents,lambda b:b['kind']=='tool' and _tool(b)==arg)
+            else:pick=choose(incidents,lambda b:b['kind']==kind and b['agent']==arg)
+            if pick and pick not in chosen:chosen.append(pick)
+        specialists=[x for x in incidents if x['beat']['kind']=='feedback' and x['beat']['agent'].startswith('SP') and x['beat']['agent']!='SP01']
+        # Keep chronological specialist feedback as recorded, rather than imply concurrency.
+        if specialists:
+            indexes=([0,len(specialists)//2,len(specialists)-1] if len(specialists)>2 else list(range(len(specialists))))
+            for i in sorted(set(indexes)):
+                if specialists[i] not in chosen:chosen.append(specialists[i])
+        for kind,agent in [('rag','SUPERVISOR'),('decision','SUPERVISOR'),('report','FINAL')]:
+            pick=choose(incidents,lambda b:b['kind']==kind and b['agent']==agent)
+            if pick and pick not in chosen:chosen.append(pick)
+    return chosen

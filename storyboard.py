@@ -2,7 +2,7 @@
 
 No telemetry queries, LLM calls, invented measurements, source-passage distribution,
 or wall-clock simulation. Playback is a guided presentation of saved evidence, NOT a
-re-execution or a claim that parallel agents ran sequentially.
+re-execution or a claim that sequential agents ran concurrently.
 """
 from html import escape
 
@@ -163,7 +163,7 @@ def build_story(c, evidence_loader):
             outcome=d.get('assessment_outcome') or {}
             scope=d.get('scope') or {}
             branch=c['route_family']
-            target=('parallel specialist investigation (KPI, cell/peer, radio, processing, transport, configuration)' if branch=='LOCAL_SPECIALISTS' else 'CU-Domain & Boundary Analysis Agent' if branch=='CU_SPECIALIST' else 'direct RCA Supervisor review')
+            target=('sequential specialist investigation (KPI, cell/peer, radio, processing, transport, configuration)' if branch=='LOCAL_SPECIALISTS' else 'CU-Domain & Boundary Analysis Agent' if branch=='CU_SPECIALIST' else 'direct RCA Supervisor review')
             add('SP01','handover','Localisation Agent dispatches investigation',
                 f"Localisation assessment: {outcome.get('conclusion','—')} | Scope class: {scope.get('supported_scope_class','—')}",
                 f"Recorded routing decision: {target}.",
@@ -187,7 +187,7 @@ def build_story(c, evidence_loader):
             add(join,'join','Specialist handover reaches correlation join',
                 'Recorded SP01 and specialist findings, where applicable',
                 'Collect the branch results for Supervisor synthesis.',
-                f"Recorded graph route uses {join}. Local specialist reports are presented one by one, although their analytical branch was parallel.",i,'Recorded LangGraph route')
+                f"Recorded graph route uses {join}. Local specialist chain spans ran sequentially in this recorded experiment.",i,'Recorded LangGraph route')
             add('SUPERVISOR','review','Supervisor reviews incident and hypotheses',
                 'SP01 findings, domain-specialist reports and contradictions',
                 'Review affected scope, competing fault hypotheses, and gaps in the existing evidence.',
@@ -255,9 +255,9 @@ def workflow_svg(route_family, story, active_index):
     completed={b['agent'] for b in story[:active_index]}
     edges=[]
     if route_family=='LOCAL_SPECIALISTS':
-        for n in ['SP02','SP03','SP04','SP05','SP06','SP07']:
-            edges.extend([('SP01',n),(n,'LOCAL_JOIN')])
-        edges += [('LOCAL_JOIN','SUPERVISOR'),('SUPERVISOR','FINAL')]
+        edges=[('SP01','SP02'),('SP02','SP03'),('SP03','SP04'),('SP04','SP05'),
+               ('SP05','SP06'),('SP06','SP07'),('SP07','LOCAL_JOIN'),
+               ('LOCAL_JOIN','SUPERVISOR'),('SUPERVISOR','FINAL')]
     elif route_family=='CU_SPECIALIST':
         edges=[('SP01','SP08'),('SP08','CU_JOIN'),('CU_JOIN','SUPERVISOR'),('SUPERVISOR','FINAL')]
     else:
@@ -270,7 +270,11 @@ def workflow_svg(route_family, story, active_index):
         right=xb-(69 if b.startswith('SP') or b=='SUPERVISOR' else 64)
         is_done=a in completed and b in completed|{current}
         col='#22bc93' if is_done else '#62849c'
-        parts.append(f'<path d="M {left} {ya} C {(left+right)/2:.0f} {ya}, {(left+right)/2:.0f} {yb}, {right} {yb}" stroke="{col}" stroke-width="{2.8 if is_done else 1.7}" fill="none" marker-end="url(#flowArrow)"/>')
+        if xa==xb and a.startswith('SP') and b.startswith('SP'):
+            path=f'M {xa} {ya+23} L {xb} {yb-23}'
+        else:
+            path=f'M {left} {ya} C {(left+right)/2:.0f} {ya}, {(left+right)/2:.0f} {yb}, {right} {yb}'
+        parts.append(f'<path d="{path}" stroke="{col}" stroke-width="{2.8 if is_done else 1.7}" fill="none" marker-end="url(#flowArrow)"/>')
     for agent,(x,y) in p.items():
         if agent==current:stroke='#46e6b5';fill='#154f62';status='IN FOCUS'
         elif agent in completed:stroke='#22b995';fill='#1c4250';status='REVIEWED'
@@ -286,14 +290,14 @@ def workflow_svg(route_family, story, active_index):
               'SUPERVISOR':'RCA Supervisor','LOCAL_JOIN':'Evidence Join','CU_JOIN':'CU Join',
               'DIRECT_JOIN':'Direct Review','FINAL':'Final RCA'}.get(agent,agent)
         sub={'SP01':'ML + telemetry','SUPERVISOR':'Evidence synthesis','FINAL':'Recorded report',
-             'LOCAL_JOIN':'Parallel branches','CU_JOIN':'CU branch','DIRECT_JOIN':'Healthy control',
+             'LOCAL_JOIN':'Evidence joined','CU_JOIN':'CU branch','DIRECT_JOIN':'Healthy control',
              'SP02':'KPI evidence','SP03':'Cell comparisons','SP04':'Radio evidence',
              'SP05':'Processing evidence','SP06':'Transport evidence','SP07':'Config evidence',
              'SP08':'CU-domain evidence'}.get(agent,'')
-        parts.append(f'<text x="{x}" y="{y-4}" font-size="12.5" text-anchor="middle" font-weight="700" fill="#eaf6ff">{escape(name)}</text>')
-        parts.append(f'<text x="{x}" y="{y+11}" font-size="10" text-anchor="middle" fill="#a8cddd">{escape(sub)}</text>')
+        parts.append(f'<text x="{x}" y="{y-4}" font-size="13.5" text-anchor="middle" font-weight="700" fill="#eaf6ff">{escape(name)}</text>')
+        parts.append(f'<text x="{x}" y="{y+11}" font-size="11" text-anchor="middle" fill="#a8cddd">{escape(sub)}</text>')
         if agent==current:
-            parts.append(f'<text x="{x}" y="{y+46}" font-size="10" text-anchor="middle" fill="#51e8c2" font-weight="bold">{status}</text>')
+            parts.append(f'<text x="{x}" y="{y+46}" font-size="11" text-anchor="middle" fill="#51e8c2" font-weight="bold">{status}</text>')
     parts.append('</svg>')
     markup=''.join(parts)
     style='''<style>body{margin:0;background:#0d1d30;font-family:system-ui,Arial,sans-serif} .frame{background:linear-gradient(130deg,#0c2135,#102c40);border:1px solid #284b62;border-radius:15px;padding:8px 8px 0}.activepulse{animation:pulse 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes pulse{0%,100%{opacity:.34}50%{opacity:1}}.foot{font:12px system-ui;color:#9ab9c6;margin:0 20px 10px}</style>'''

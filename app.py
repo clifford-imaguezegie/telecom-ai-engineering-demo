@@ -8,7 +8,7 @@ import json
 import re
 import time
 from storyboard import AGENT_ROLES, build_story, workflow_svg, evidence_preview
-from operational_demo import (guided_sequence, get_run_durations, event_trace_offset,
+from operational_demo import (guided_sequence, executive_sequence, get_run_durations, event_trace_offset,
                               format_clock, sp01_tools_unlocked, available_agents)
 from html import escape
 from presentation import agent_label, format_duration, agent_execution_rows, benchmark_summary
@@ -27,7 +27,7 @@ BASE = Path(__file__).resolve().parent
 DATA = BASE / 'data'
 PAGES = ['Platform Overview','Guided Operations Demo','Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
 
-st.set_page_config(page_title='Telecom AI | Guided Operations & RCA',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
+st.set_page_config(page_title='TREAD AI | Telecom Investigation & RCA',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
 st.markdown('''<style>
 .block-container {padding-top:1.5rem;padding-bottom:3rem;max-width:1500px}
 [data-testid="stSidebar"]{background:#101e30}
@@ -86,6 +86,10 @@ h1,h2,h3{letter-spacing:-.025em}
 .ops-kpi .desc{font-size:.75rem;color:#c0d8e0}
 .route-box{background:#f6f9fc;border:1px solid #dce8f1;padding:.8rem 1rem;border-radius:10px;font-size:.88rem;line-height:2.15}
 @media (prefers-color-scheme:dark){.route-box{background:#1a2631;border:1px solid #405261}}
+.wrap-value{border:1px solid #cbdbe5;background:#f3f8fa;border-radius:10px;padding:12px 14px;min-height:90px}
+.wrap-value span{display:block;color:#496778;font-size:.78rem;margin-bottom:8px}
+.wrap-value strong{display:block;color:#14384c;font-size:1.12rem;line-height:1.28;overflow-wrap:anywhere;white-space:normal}
+[data-testid="stVerticalBlock"]{scroll-margin-top:1rem}
 </style>''',unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False)
@@ -132,7 +136,7 @@ def heading(title,desc=None):
 def route_text(c):
  """Public-facing route summary while trace identifiers remain in engineer view."""
  if c['route_family']=='LOCAL_SPECIALISTS':
-  return 'Network Localisation → [KPI ∥ Cell & Peer ∥ Radio ∥ Processing ∥ Transport ∥ Configuration] → Evidence Consolidation → RCA Supervisor'
+  return 'Network Localisation → KPI → Cell & Peer → Radio → Processing → Transport → Configuration → RCA Supervisor (recorded sequential route)'
  if c['route_family']=='CU_SPECIALIST':
   return 'Network Localisation → CU-Domain & Boundary Analysis → Evidence Consolidation → RCA Supervisor'
  return 'Network Health Assessment → RCA Supervisor (healthy control)'
@@ -187,11 +191,41 @@ def data_field_sections(data,show_json=False):
 def state_summary(c):
  d=c['derived_display']
  a,b,cc=st.columns(3)
- with a:st.metric('Observed condition',run_badge(c))
- with b:st.metric('Final scope',pretty(d['scope_class']))
- with cc:st.metric('Trace execution',format_duration(c['trace_duration_seconds']))
- st.markdown(f"**Supervisor diagnosis:** {d.get('diagnosis') or 'No diagnosis recorded.'}")
+ for col,title,val in [(a,'Observed condition',run_badge(c)),(b,'Final scope',pretty(d['scope_class'])),(cc,'Trace execution',format_duration(c['trace_duration_seconds']))]:
+  with col:
+   st.markdown(f'<div class="wrap-value"><span>{escape(title)}</span><strong>{escape(val)}</strong></div>',unsafe_allow_html=True)
+ st.caption('Full recorded Supervisor diagnosis is available under Original detailed Supervisor diagnosis.')
 
+
+
+def render_rca_outcome(case):
+    """Source-backed executive reading layer; saved Supervisor outputs remain intact."""
+    su=case['stage_data']['supervisor_output']
+    scope=su.get('final_scope') or {}
+    sites=scope.get('affected_sites') or []
+    domains=scope.get('affected_cu_domains') or []
+    cells=scope.get('affected_cells') or []
+    st.subheader('Investigation outcome at a glance')
+    if not su.get('incident_present'):
+        st.success('No material incident supported by this recorded assessment. No specialist escalation was required.')
+        st.caption('The healthy control was reviewed by the RCA Supervisor without knowledge-base retrieval.')
+        return
+    st.markdown('**Recorded likely fault mechanism:** '+str((su.get('root_cause_assessment') or {}).get('root_cause') or su.get('root_cause_family') or 'Not established'))
+    st.markdown('**Affected scope:** '+str(len(sites))+' site(s), '+str(len(cells))+' cell(s), '+str(len(domains))+' CU domain(s)')
+    if sites:st.caption('Sites: '+', '.join(map(str,sites)))
+    st.markdown('**Recorded execution time:** '+format_duration(case.get('trace_duration_seconds'))+' · **Agent confidence class:** '+str((su.get('root_cause_assessment') or {}).get('confidence') or 'Unreported'))
+    x,y=st.columns(2)
+    with x:
+        st.markdown('**Key supporting observations**')
+        for v in (su.get('supporting_evidence') or [])[:3]:st.markdown('• '+str(v))
+        st.markdown('**Weakened competing explanations**')
+        for v in (su.get('contradictory_evidence') or [])[:2]:st.markdown('• '+str(v))
+    with y:
+        st.markdown('**Uncertainty and evidence gaps**')
+        for v in (su.get('residual_uncertainty') or ['No further limitation recorded in the Supervisor final output.'])[:3]:st.markdown('• '+str(v))
+        st.markdown('**Recommended engineering follow-up**')
+        for v in (su.get('recommendations') or ['See original Supervisor report.'])[:2]:st.markdown('• '+str(v))
+    st.caption('This summary is extracted from the recorded Supervisor output and is not a new RCA. A HIGH class is the agent’s recorded judgement, not independently calibrated probability or validation of the exact physical failure mechanism.')
 
 def kb_list(label, values, empty='Not recorded in this Supervisor output'):
  """Show Supervisor-recorded knowledge grounding text without raw retrieved passages."""
@@ -217,8 +251,8 @@ def render_kb_contribution(supervisor):
   return
  a,b,d=st.columns(3)
  with a:st.metric('RAG contribution','Used')
- with b:st.metric('Contribution type',pretty(k.get('contribution_type')))
- with d:st.metric('Evidence weight',pretty(k.get('evidence_weight')))
+ with b:st.markdown(f'<div class="wrap-value"><span>Contribution type</span><strong>{escape(pretty(k.get("contribution_type")))}</strong></div>',unsafe_allow_html=True)
+ with d:st.markdown(f'<div class="wrap-value"><span>Evidence weight</span><strong>{escape(pretty(k.get("evidence_weight")))}</strong></div>',unsafe_allow_html=True)
  st.markdown('**1. Question asked by the Supervisor**')
  for q in k.get('queries') or []:st.info(str(q))
  st.markdown('**2. Knowledge-informed fault mechanism**')
@@ -281,7 +315,7 @@ def architecture_diagram():
 <div style="text-align:center;color:#36627b;font-size:1.4rem;line-height:1.5">↓ conditional investigation route ↓</div>
 <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-width:850px;margin:auto">
 <div style="padding:11px;border-radius:9px;background:#e4f4ed;border:1px solid #9ccab4"><strong>Healthy network</strong><div style="font-size:.82rem">Direct Supervisor review; no specialist escalation</div></div>
-<div style="padding:11px;border-radius:9px;background:#fef2df;border:1px solid #e8c68d"><strong>Material incident</strong><div style="font-size:.82rem">Relevant parallel specialist agents or CU-domain specialist inspect telemetry, tools and competing causes</div></div>
+<div style="padding:11px;border-radius:9px;background:#fef2df;border:1px solid #e8c68d"><strong>Material incident</strong><div style="font-size:.82rem">Sequential specialist analysis (cell/site recordings) or CU-domain analysis; investigate tools, measurements and competing causes</div></div>
 </div>
 <div style="text-align:center;color:#36627b;font-size:1.4rem;line-height:1.5">↓ investigation evidence ↓</div>
 <div style="max-width:710px;margin:auto;text-align:center;padding:11px;border-radius:10px;background:#173d53;color:#f4fcff"><strong>3. RCA Supervisor &amp; Evidence Synthesis</strong><div style="font-size:.82rem;color:#d3eaf0">Correlates agent results; uses Curated Telecom Knowledge Base when needed to assess fault mechanisms and hypotheses</div></div>
@@ -302,13 +336,13 @@ def render_solution_intro(cases, include_architecture=True):
  </div>""",unsafe_allow_html=True)
  st.markdown('**Demonstrated investigation milestones**')
  x,y,z=st.columns(3)
- facts=[(x,'< 1 min','Detect a material issue',f"Localisation agent assessment • {b['health_assessment_under_1min']}/{b['health_assessment_total']} recorded scenarios"),
+ facts=[(x,'< 1 min','Assess network health',f"Localisation agent assessment • {b['health_assessment_under_1min']}/{b['health_assessment_total']} recorded scenarios"),
         (y,'≤ 2 min','Localise affected scope',f"Localisation agent handover • {b['localisation_under_2min']}/{b['localisation_total']} recorded scenarios"),
         (z,'< 5 min','Evidence-grounded RCA',f"Full incident investigation • {b['incident_rca_under_5min']}/{b['incident_total']} incident scenarios")]
  for col,num,title,detail in facts:
   with col:
    st.markdown(f'<div class="ops-milestone"><div class="number">{escape(num)}</div><div class="label">{escape(title)}</div><div class="detail">{escape(detail)}</div></div>',unsafe_allow_html=True)
- st.caption('Benchmarks are from completed synthetic-network LangSmith traces, not production SLAs or validated MTTR savings. Fault/scope identification is measured by the recorded localisation agent completion; there is no separately timed specialist localisation milestone.')
+ st.caption('Benchmarks are from completed synthetic-network LangSmith traces, not production SLAs or validated MTTR savings. Health assessment and initial fault-scope localisation share the same recorded SP01 completion timestamp; they are not two independently timed milestones. No specialist-localisation latency is claimed.')
  if include_architecture:
   architecture_diagram()
 
@@ -359,7 +393,9 @@ def cinematic_replay(sid):
   if speed!=player['seconds']:
    player['seconds']=speed;player['last_tick']=time.monotonic()
 
- seek=st.slider('Presentation timeline',min_value=0,max_value=last,value=player['index'],format='%d',key='cinema_seek_'+sid+'_'+str(player['index']))
+ seek_key='cinema_seek_'+sid
+ st.session_state[seek_key]=player['index']
+ seek=st.slider('Presentation timeline',min_value=0,max_value=last,format='%d',key=seek_key)
  if seek!=player['index']:
   player['index']=seek;player['playing']=False;player['last_tick']=time.monotonic();st.rerun(scope='fragment')
  idx=player['index']
@@ -381,7 +417,7 @@ def cinematic_replay(sid):
   st.caption('Original recorded tool start: '+nice_time(beat['timestamp']))
  st.caption('Provenance: '+beat['source']+(('  ·  Evidence ID: `'+beat['evidence_id']+'`') if beat['evidence_id'] else ''))
  if c['route_family']=='LOCAL_SPECIALISTS':
-  st.caption('SP02–SP07 are parallel analytical branches in the saved LangGraph design. This guided playback reviews their recorded outputs in a human-readable sequence; it does not imply they originally ran sequentially.')
+  st.caption('Recorded execution: the six cell/site specialists ran sequentially in this experiment. Parallel execution was deferred to avoid instability with large investigation inputs.')
  st.caption('Playback pacing is illustrative, not the original execution timing. Original node timestamps/durations are available under the technical stage inspector. No network scan, LLM, RAG, or tool call is executed here.')
  with st.expander('Original recorded source for the current beat'):
   stage=c['stages'][beat['stage_index']]
@@ -479,7 +515,7 @@ def guided_agent_drilldown(case, current_agent, current_beat):
 
 
 @st.fragment(run_every='1s')
-def guided_operations_player(selected_sid, include_healthy):
+def guided_operations_player(selected_sid, include_healthy, executive=False):
     healthy_sid='M05I0017'
     healthy=load_case(healthy_sid)
     incident=load_case(selected_sid)
@@ -487,12 +523,14 @@ def guided_operations_player(selected_sid, include_healthy):
         incident if selected_sid != healthy_sid else None,
         load_storyboard(selected_sid) if selected_sid != healthy_sid else [],
         include_healthy=include_healthy or selected_sid==healthy_sid)
+    if executive:
+        timeline=executive_sequence(timeline)
     if not timeline:
         st.warning('No recorded investigation selected.')
         return
-    key='ops_player_'+selected_sid+'_'+str(include_healthy)
+    key='ops_player_'+selected_sid+'_'+str(include_healthy)+('_executive' if executive else '')
     if key not in st.session_state:
-        st.session_state[key]={'index':0,'playing':False,'seconds':7,'last_tick':time.monotonic(),
+        st.session_state[key]={'index':0,'playing':False,'seconds':6 if executive else 7,'last_tick':time.monotonic(),
                                'carry':0.,'presentation_elapsed':0.}
     play=st.session_state[key]
     last=len(timeline)-1
@@ -503,7 +541,7 @@ def guided_operations_player(selected_sid, include_healthy):
         play['presentation_elapsed']+=dt
         while play['index'] < last:
             current_kind=timeline[play['index']]['beat']['kind']
-            hold=play['seconds'] * (1.5 if current_kind in {'decision','rag','feedback','handover','report'} else 1.0)
+            hold=play['seconds'] * (1.0 if executive else (1.5 if current_kind in {'decision','rag','feedback','handover','report'} else 1.0))
             if play['carry'] < hold:break
             play['carry']-=hold
             play['index']+=1
@@ -529,13 +567,15 @@ def guided_operations_player(selected_sid, include_healthy):
             play.update({'index':0,'playing':False,'carry':0.,'presentation_elapsed':0.,'last_tick':time.monotonic()})
             st.rerun(scope='fragment')
     with controls[4]:
-        speed=st.selectbox('Playback pacing',[3,5,7,10,14],
-                           index=[3,5,7,10,14].index(play['seconds']) if play['seconds'] in [3,5,7,10,14] else 2,
+        speeds=[4,5,6,7,8] if executive else [3,5,7,10,14]
+        speed=st.selectbox('Playback pacing',speeds,
+                           index=speeds.index(play['seconds']) if play['seconds'] in speeds else 2,
                            format_func=lambda x:f'{x}s per presentation beat',
                            label_visibility='collapsed',key=key+'_pace')
         if speed!=play['seconds']:play['seconds']=speed;play['carry']=0.
-    changed=st.slider('Playback position',min_value=0,max_value=last,value=play['index'],
-                      key=key+'_seek_'+str(play['index']))
+    seek_key=key+'_seek'
+    st.session_state[seek_key]=play['index']
+    changed=st.slider('Playback position',min_value=0,max_value=last,key=seek_key)
     if changed!=play['index']:
         play['index']=changed;play['playing']=False;play['carry']=0.;st.rerun(scope='fragment')
     idx=play['index'];item=timeline[idx];sid=item['scenario_id'];beat=item['beat'];case=healthy if sid==healthy_sid else incident
@@ -553,7 +593,7 @@ def guided_operations_player(selected_sid, include_healthy):
     st.markdown(f"""<div class="ops-hero"><div class="ops-head"><div>
       <div class="ops-eyebrow"><span class="ops-dot"></span>{escape(item['act'])} · RECORDED LANGGRAPH REPLAY</div>
       <div class="ops-headline">{escape(title)}</div>
-      <div class="ops-sub">{escape(sid)} · {escape(case['title'])}</div></div>
+      <div class="ops-sub">{escape(case['title'])}</div></div>
       <div class="ops-pill{' alert' if alert else ''}">{escape(status)}</div></div> </div>""",unsafe_allow_html=True)
     a,b,d,e=st.columns(4)
     a.metric('Presentation timer',format_clock(play['presentation_elapsed']),help='Time spent watching playback, not original execution duration.')
@@ -566,7 +606,7 @@ def guided_operations_player(selected_sid, include_healthy):
     # viewers do not have to scroll between the graphic and the latest output.
     graph,live=st.columns([1.36,1],gap='small')
     with graph:
-        st.caption('Recorded orchestration · selected agent highlighted')
+        st.caption('Recorded orchestration · selected agent highlighted · sequential specialist execution in cell/site cases')
         case_beats=load_storyboard(sid)
         active_index=next(i for i,b in enumerate(case_beats) if b['sequence']==beat['sequence'])
         embed_workflow_html(workflow_svg(case['route_family'],case_beats,active_index),height=265,scrolling=False)
@@ -577,7 +617,7 @@ def guided_operations_player(selected_sid, include_healthy):
         # Brief, readable previews scroll *inside* their cards; complete content
         # is available below without losing the animation's current position.
         st.markdown(''.join(panels),unsafe_allow_html=True)
-    st.caption('Recorded '+agent_label(beat['agent'])+' activity · Key conclusions are held 1.5× longer during autoplay. Open the evidence inspector for exact trace identifiers and tool records.')
+    st.caption('Recorded '+agent_label(beat['agent'])+' activity · '+('Executive cut: selected source-backed milestones.' if executive else 'Important findings have longer playback holds.')+' Pause or open the inspector to see the original record.')
     with st.expander('Full current-stage messages and localisation evidence (click to inspect)',expanded=False):
         st.caption('Original trace provenance: '+beat['source'] + (' · '+beat['evidence_id'] if beat.get('evidence_id') else ''))
         st.markdown('**Incoming context / handover**')
@@ -596,7 +636,7 @@ def guided_operations_player(selected_sid, include_healthy):
     if include_healthy and selected_sid!=healthy_sid and sid==healthy_sid:
         st.info('First independent recording: healthy network. After its report, the presentation switches to a **different recorded incident**, not a new alert detected in the same continuous live network.')
     if case['route_family']=='LOCAL_SPECIALISTS':
-        st.caption('The six cell/site specialist agents ran as parallel branches; frames are sequential for explanation, not execution chronology.')
+        st.caption('Recorded execution: the six cell/site specialists ran sequentially. The graph and evidence progression reflect that experimental execution order.')
     guided_agent_drilldown(case,beat['agent'],beat)
     if beat['agent']=='FINAL':
         if not material:st.success('Recorded health check complete: no material degradation identified; no specialist escalation was needed.')
@@ -611,15 +651,15 @@ def guided_operations_player(selected_sid, include_healthy):
 
 # Sidebar state
 manifest=load_manifest()
-st.sidebar.markdown('### ◈ TELECOM AI ENGINEERING')
-st.sidebar.caption('Recorded 5G Network Investigations')
+st.sidebar.markdown('### ◈ TREAD AI')
+st.sidebar.caption('Telecom AI Engineering Platform')
 st.sidebar.divider()
 if 'requested_page' in st.session_state:
  st.session_state['nav_page']=st.session_state.pop('requested_page')
 if 'selected_scenario' not in st.session_state:st.session_state['selected_scenario']='M05I0003'
 if 'nav_page' not in st.session_state:st.session_state['nav_page']='Platform Overview'
 page=st.sidebar.radio('Workspace',PAGES,key='nav_page')
-opts={x:x+'   ·   '+next(c['title'] for c in manifest['cases'] if c['scenario_id']==x) for x in manifest['scenario_order']}
+opts={x:next(c['title'] for c in manifest['cases'] if c['scenario_id']==x) for x in manifest['scenario_order']}
 if page=='Scenario Library':
  if st.session_state.get('_last_page')!='Scenario Library':
   st.session_state['library_case_selection']=st.session_state['selected_scenario']
@@ -631,28 +671,29 @@ else:
 st.session_state['_last_page']=page
 c=load_case(sid)
 st.sidebar.divider()
-st.sidebar.caption('MODE  01 — STATIC / OFFLINE REPLAY')
+st.sidebar.caption('RECORDED INVESTIGATION DEMO')
 st.sidebar.caption('No live agent, telemetry, LLM, API key or paid inference calls.')
 st.sidebar.caption('Synthetic experimental network • not production operations')
 
-st.markdown(f'''<div class="hero"><div class="eyebrow">Telecom AI Engineering / Module 5</div><h1>Telecom AI Engineering Platform</h1><div class="sub">Intelligent network assessment · ML-assisted localisation · Specialist AI investigation · Knowledge-grounded root cause analysis</div></div>''',unsafe_allow_html=True)
+st.markdown(f'''<div class="hero"><div class="eyebrow">TREAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TREAD AI — Telecom AI Engineering Platform</h1><div class="sub">Intelligent network assessment · ML-assisted localisation · Specialist AI investigation · Knowledge-grounded root cause analysis</div></div>''',unsafe_allow_html=True)
 
 if page=='Platform Overview':
- heading('Discover the Platform','What has been built, what it has demonstrated, and how the investigation architecture works.')
- render_solution_intro([load_case(x) for x in manifest['scenario_order']])
- st.divider()
- st.markdown('### Watch a recorded investigation')
+ heading('Discover TREAD AI','Network fault investigation often requires engineers to correlate radio, processing, transport and configuration evidence. See how agent-led ML, telemetry, specialised analysis and telecom knowledge produce a traceable RCA.')
+ render_solution_intro([load_case(x) for x in manifest['scenario_order']],include_architecture=False)
+ st.markdown('### Choose your experience')
  st.write('Follow the Network Health & Localisation Agent through its two ML predictions, network telemetry, specialist analysis, knowledge-grounded reasoning and final RCA. Pause anywhere to inspect the original evidence.')
- if st.button('▶ Start the Guided Operations Demo',type='primary',use_container_width=True):
+ if st.button('▶ Watch the investigation',type='primary',use_container_width=True):
   st.session_state['requested_page']='Guided Operations Demo';st.rerun()
+ st.divider()
+ architecture_diagram()
  st.divider()
  render_value_proposition()
 
 elif page=='Guided Operations Demo':
- render_solution_intro([load_case(x) for x in manifest['scenario_order']],include_architecture=False)
- st.caption('The full solution architecture and design explanation are on **Platform Overview**, the first page in the sidebar.')
+ st.caption('Recorded synthetic-network investigations · Select the executive overview or full engineering replay. Architecture and benchmarks are on **Platform Overview**.')
  heading('Guided Operations Demo','An animated, engineer-inspectable journey from network health assessment to evidence-grounded root cause analysis. All data comes from completed, independent LangGraph runs.')
  main_sid=sid if sid!='M05I0017' else 'M05I0003'
+ experience=st.radio('Visitor experience',['Executive overview (~90 seconds)','Full engineering replay'],horizontal=True)
  modes=['Healthy check → Separate incident','Incident investigation only'] if sid!='M05I0017' else ['Healthy check only']
  mode=st.radio('Presentation',modes,horizontal=True)
  if sid=='M05I0017':st.info('Healthy-control scenario selected. Choose an incident in the sidebar to show a complete health-to-incident demonstration.')
@@ -660,7 +701,7 @@ elif page=='Guided Operations Demo':
   st.info('**Two independent saved scenarios:** M05I0017 (healthy control), then '+main_sid+' ('+c['title']+'). The scene change is editorial, not an assertion that the healthy network developed a fault. The original 15-minute telemetry interval is independent of playback speed.')
  else:
   st.caption('Single recorded incident investigation. The animated pace is for explanation, not a claim that the platform is running now.')
- guided_operations_player(main_sid if sid!='M05I0017' else sid,mode==modes[0])
+ guided_operations_player(main_sid if sid!='M05I0017' else sid,mode==modes[0],executive=experience.startswith('Executive'))
  st.divider()
  render_value_proposition()
  st.markdown('**Want more detail?** Open **Agentic Replay** for every recorded call and stage, **Engineering Evidence** for source KPI series, or **Evaluation & Performance** for the original trace measurements and post-run checks.')
@@ -709,9 +750,9 @@ elif page=='Scenario Library':
  st.caption('One scenario is selected by default. Use the dropdown above to explore any of the nine completed cases.')
  left,right=st.columns([1,1.6]);d=c['derived_display']
  with left:
-  st.caption('SELECTED CASE')
-  st.header(sid)
-  st.write(c['title'])
+  st.caption('SELECTED INVESTIGATION')
+  st.header(c['title'])
+  st.caption('Trace reference: '+sid)
   st.markdown('**Recorded status:** '+run_badge(c))
   st.markdown('**Fault family:** '+pretty(d['fault_family']))
   st.markdown('**Affected scope:** '+pretty(d['scope_class']))
@@ -736,7 +777,7 @@ elif page=='Agentic Replay':
   st.caption('Play or scrub through the original recorded investigation. A highlighted agent indicates the point being *presented*, not an active live process.')
   cinematic_replay(sid)
  else:
-  heading('Recorded-stage inspector','Reveal the actual saved SP01, specialist, and Supervisor reasoning stages in sequence. This is navigation through recorded outputs—not rerunning models.')
+  heading('Recorded-stage inspector','Reveal the actual saved localisation, specialist, and Supervisor reasoning stages in sequence. This is navigation through recorded outputs—not rerunning models.')
   stages=c['stages']; key='replay_'+sid
   if key not in st.session_state:st.session_state[key]=0
   step=st.session_state[key];step=min(step,len(stages)-1)
@@ -751,11 +792,11 @@ elif page=='Agentic Replay':
   with col4:st.metric('Stage',f'{step+1}/{len(stages)}')
   st.progress((step+1)/len(stages))
   st.write('**Recorded routing:** '+route_text(c))
-  if c['route_family']=='LOCAL_SPECIALISTS':st.caption('SP02–SP07 form parallel analytical branches; the stage navigator presents their saved outputs sequentially for inspection.')
+  if c['route_family']=='LOCAL_SPECIALISTS':st.caption('The recorded cell/site investigation ran six specialist chains sequentially; the stage navigator follows the saved order.')
   active=stages[step];item=c['stage_data'][active['key']]
   st.subheader(f"{agent_label(active['agent'],include_id=True)}  /  {active['label']}")
   if active['key']=='sp01_evidence_cycle_1':
-   st.write('The Network Health & Localisation Agent retrieved the following source records before localizing the suspected incident:')
+   st.write('The Network Health & Localisation Agent requested the following evidence before localising the suspected incident:')
    for name,v in item.items():st.markdown(f"• **{name}** · `{v.get('evidence_id')}`")
   elif active['key']=='supervisor_output':
    st.markdown('**Final recorded decision**')
@@ -774,6 +815,10 @@ elif page=='Agentic Replay':
 elif page=='Root Cause Analysis':
  heading('Root Cause Analysis','This is the recorded Supervisor conclusion, not an independently inferred or regenerated RCA.')
  su=c['stage_data']['supervisor_output'];d=c['derived_display']
+ render_rca_outcome(c)
+ st.divider()
+ with st.expander('Original detailed Supervisor diagnosis',expanded=False):
+  st.write(su.get('diagnosis') or 'No material incident supported.')
  state_summary(c)
  if su.get('incident_present'):
   cl,cr=st.columns([1,1]);
@@ -784,7 +829,7 @@ elif page=='Root Cause Analysis':
    st.markdown('**Recorded confidence class**');st.write((su.get('root_cause_assessment') or {}).get('confidence','Not recorded'))
    st.markdown('**Target component**');st.write(pretty(su.get('target_component')))
    st.markdown('**Affected domain**');st.write(pretty(su.get('target_cu_domain_id')))
-   st.markdown('**Affected site**');st.write(pretty(su.get('target_site_id')))
+   st.markdown('**Affected site(s)**');st.write(', '.join((su.get('final_scope') or {}).get('affected_sites') or []) or pretty(su.get('target_site_id')))
    if su.get('target_component_justification'):st.caption(su['target_component_justification'])
   with cr:
    heading('Supporting evidence')
@@ -808,7 +853,7 @@ elif page=='Root Cause Analysis':
  render_kb_contribution(su)
  st.divider()
  heading('Investigation agents · execution time & tools',
-         'Per-agent wall-clock execution and separately summed LLM invocation spans. Parallel agents overlap; their durations must not be added together.')
+         'Per-agent wall-clock execution and separately summed LLM invocation spans. Recorded cell/site specialist runs were sequential. Agent runtime includes tool and LLM work; do not confuse individual LLM spans with full-chain wall time.')
  records=agent_execution_rows(c)
  if records:
   shown=[{k:v for k,v in row.items() if k in ['Agent','Purpose','Agent runtime','LLM inference (spans)','Tools used']} for row in records]
@@ -856,7 +901,7 @@ elif page=='Engineering Evidence':
     available.append(ev)
   if not available:st.info('No additional specialist telemetry requested in this healthy-control route.')
   else:
-   selected=st.selectbox('Recorded telemetry tool',available,format_func=lambda e:e['stage']+' · '+e['tool'])
+   selected=st.selectbox('Recorded telemetry tool',available,format_func=lambda e:agent_label(e['stage'])+' · '+display_tool_name(e['tool'])+' · '+str(e.get('reason') or 'recorded response')[:44]+' · '+e['evidence_id'][-7:])
    result=load_evidence(sid,selected['evidence_id'])['result']
    fields=[]
    if isinstance(result,dict):
@@ -909,13 +954,14 @@ elif page=='Engineering Evidence':
 elif page=='Evaluation & Performance':
  heading('Evaluation & Performance','Separate operational runtime measurements and trace integrity from post-run evaluations of the corresponding saved runs.')
  run=c['saved_postrun_evaluation'];a,b,d=st.columns(3)
- a.metric('Recorded trace duration',f"{c['trace_duration_seconds']:.2f} s")
+ a.metric('Recorded trace duration',format_duration(c['trace_duration_seconds']))
  b.metric('LangSmith run nodes',len(c['observed_nodes']))
  d.metric('Recorded evidence artifacts',len(c['evidence_index']))
  st.divider();heading('Recorded execution profile')
  nodes=pd.DataFrame(c['observed_nodes'])
  x=nodes[(nodes['depth']==0) | (nodes['name'].isin(['SP01','SP02','SP03','SP04','SP05','SP06','SP07','SP08','SUPERVISOR']))]
  st.dataframe(x[['name','run_type','start_time','end_time','duration_seconds','total_tokens','total_cost']],hide_index=True,use_container_width=True)
+ st.caption('Token and cost fields in the export are not reliable proof of original inference usage or zero cost. Treat missing/zero accounting as unavailable unless independently reconciled.')
  tokens=pd.to_numeric(nodes.loc[nodes['run_type']=='llm','total_tokens'],errors='coerce').dropna()
  if len(tokens):st.caption(f"Summed reported tokens across LLM node records (not a billing estimate): {int(tokens.sum()):,}.")
  else:st.caption('No complete per-LLM token counts were recorded in exported child nodes. No synthetic usage estimate is shown.')
@@ -927,6 +973,7 @@ elif page=='Evaluation & Performance':
  score1.metric('Post-run judge score',f"{run.get('judge_score_out_of_5'):.2f} / 5" if run.get('judge_score_out_of_5') is not None else '—')
  score2.metric('Post-run exact match',f"{run.get('structured_exact_match_rate')*100:.1f}%" if run.get('structured_exact_match_rate') is not None else '—')
  score3.metric('Post-run deterministic checks',pretty(run.get('deterministic_status')))
+ st.caption('The saved evaluation provides a summary score without the field-level match breakdown or full judging rubric. These values are not independent RCA accuracy; 75% exact match cannot be attributed to particular fields from this dataset alone.')
  st.write('**Post-run path check:** '+str(run.get('path_check'))+'  ·  **Supervisor schema:** '+str(run.get('supervisor_schema'))+'  ·  **Post-run judge status:** '+str(run.get('judge_status')))
  st.caption(f"Source: saved notebook cell {run.get('notebook_source_cell')}, reported trace export {run.get('reported_trace_basename')}")
  st.divider();heading('Source provenance & verification')
@@ -943,4 +990,4 @@ elif page=='Evaluation & Performance':
  st.caption('V2 (deferred) would require live retrieval/authentication, LangGraph execution, MCP adapters, access policies, observability, and cost controls. None are enabled in V1.')
 
 st.divider()
-st.caption('TELECOM AI ENGINEERING • MODULE 5 / M05_06D • STATIC EVIDENCE REPLAY • SYNTHETIC TEST NETWORK • ALL TIMESTAMPS IN UTC')
+st.caption('TREAD AI • RECORDED INVESTIGATION REPLAY • SYNTHETIC TEST NETWORK • ALL TIMESTAMPS IN UTC')
