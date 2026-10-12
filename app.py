@@ -401,7 +401,9 @@ def cinematic_replay(sid):
  idx=player['index']
  beat=beats[idx]
  st.progress((idx+1)/len(beats),text=f'PLAYBACK {idx+1} / {len(beats)}  •  {"PLAYING" if player["playing"] else "PAUSED"}  •  {agent_label(beat["agent"])}')
- embed_workflow_html(workflow_svg(c['route_family'],beats,idx),height=390,scrolling=False)
+ embed_workflow_html(workflow_svg(c['route_family'],beats,idx),height=250,scrolling=False)
+ with st.expander('View complete recorded agent route',expanded=False):
+  embed_workflow_html(workflow_svg(c['route_family'],beats,idx,mode='overview'),height=405,scrolling=False)
  st.markdown(f'#### {idx+1:02d} — {beat["title"]}')
  panels=st.columns([1,1,1.12])
  with panels[0]:
@@ -609,7 +611,9 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
         st.caption('Recorded orchestration · selected agent highlighted · sequential specialist execution in cell/site cases')
         case_beats=load_storyboard(sid)
         active_index=next(i for i,b in enumerate(case_beats) if b['sequence']==beat['sequence'])
-        embed_workflow_html(workflow_svg(case['route_family'],case_beats,active_index),height=265,scrolling=False)
+        embed_workflow_html(workflow_svg(case['route_family'],case_beats,active_index),height=250,scrolling=False)
+        with st.expander('View complete recorded agent route',expanded=False):
+            embed_workflow_html(workflow_svg(case['route_family'],case_beats,active_index,mode='overview'),height=405,scrolling=False)
     with live:
         st.markdown(f'**{escape(agent_label(beat["agent"]))}**')
         st.caption(f'{beat["title"]} · Stage {idx+1}/{len(timeline)}')

@@ -260,3 +260,8 @@ python -m pytest -q tests
 ```
 
 **QA limitation:** Automated source-contract and framework-stub page tests can run without Streamlit. Actual Play/Pause interaction, browser layout, chart rendering, and mobile responsiveness should be accepted on the deployed Streamlit instance.
+
+
+## V1.4.1 — Readable animated workflow
+
+The Guided Operations Demo and Agentic Replay now highlight a larger **Previous → Current → Next** recorded agent transition instead of shrinking the complete route into a miniature diagram. The complete recorded route is accessible in an expander. Recorded data, timings, investigation order, ML outputs, RCA conclusions, and playback controls are unchanged. See `V1_4_1_RELEASE_NOTES.md`.

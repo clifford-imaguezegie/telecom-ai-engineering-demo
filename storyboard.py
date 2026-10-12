@@ -237,68 +237,124 @@ def build_story(c, evidence_loader):
     return beats
 
 
-def _node_positions(route_family):
-    if route_family=='LOCAL_SPECIALISTS':
-        p={'SP01':(115,195),'LOCAL_JOIN':(830,195),'SUPERVISOR':(1052,195),'FINAL':(1238,195)}
-        for i,n in enumerate(['SP02','SP03','SP04','SP05','SP06','SP07']):p[n]=(510,55+56*i)
-    elif route_family=='CU_SPECIALIST':
-        p={'SP01':(155,185),'SP08':(426,185),'CU_JOIN':(701,185),'SUPERVISOR':(974,185),'FINAL':(1238,185)}
-    else:
-        p={'SP01':(170,185),'DIRECT_JOIN':(512,185),'SUPERVISOR':(853,185),'FINAL':(1190,185)}
-    return p
+def _recorded_route(story):
+    """Actual saved stage order, including recorded joins; never infer parallelism."""
+    route = []
+    for event in story:
+        agent = event['agent']
+        if agent not in route:
+            route.append(agent)
+    return route
 
 
-def workflow_svg(route_family, story, active_index):
-    """Self-contained source-independent SVG; only stage-backed active statuses."""
-    p=_node_positions(route_family)
-    current=story[active_index]['agent']
-    completed={b['agent'] for b in story[:active_index]}
-    edges=[]
-    if route_family=='LOCAL_SPECIALISTS':
-        edges=[('SP01','SP02'),('SP02','SP03'),('SP03','SP04'),('SP04','SP05'),
-               ('SP05','SP06'),('SP06','SP07'),('SP07','LOCAL_JOIN'),
-               ('LOCAL_JOIN','SUPERVISOR'),('SUPERVISOR','FINAL')]
-    elif route_family=='CU_SPECIALIST':
-        edges=[('SP01','SP08'),('SP08','CU_JOIN'),('CU_JOIN','SUPERVISOR'),('SUPERVISOR','FINAL')]
-    else:
-        edges=[('SP01','DIRECT_JOIN'),('DIRECT_JOIN','SUPERVISOR'),('SUPERVISOR','FINAL')]
-    parts=['<svg role="img" aria-label="Recorded agent routing and active presentation stage" viewBox="0 0 1345 395" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto;display:block">',
-           '<defs><marker id="flowArrow" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="none" stroke="#62849c" stroke-width="1.5"/></marker></defs>']
-    for a,b in edges:
-        xa,ya=p[a];xb,yb=p[b]
-        left=xa+(69 if a.startswith('SP') or a=='SUPERVISOR' else 64)
-        right=xb-(69 if b.startswith('SP') or b=='SUPERVISOR' else 64)
-        is_done=a in completed and b in completed|{current}
-        col='#22bc93' if is_done else '#62849c'
-        if xa==xb and a.startswith('SP') and b.startswith('SP'):
-            path=f'M {xa} {ya+23} L {xb} {yb-23}'
+def workflow_svg(route_family, story, active_index, mode='focus'):
+    """Responsive HTML workflow with source-backed focus and optional full-route view.
+
+    Historical name retained for compatibility with previous replay modules. It
+    returns self-contained HTML containing SVG arrow glyphs, NOT a huge SVG
+    canvas compressed to half a laptop screen. Does not change any trace data.
+    """
+    if mode not in {'focus', 'overview'}:
+        raise ValueError('mode must be focus or overview')
+    if not story or not 0 <= active_index < len(story):
+        raise ValueError('A valid recorded presentation beat is required')
+    route = _recorded_route(story)
+    current = story[active_index]['agent']
+    selected = route.index(current)
+    visited = {event['agent'] for event in story[:active_index]}
+    role_detail = {
+        'SP01':'ML predictions and network telemetry',
+        'SP02':'Accessibility KPI evidence',
+        'SP03':'Affected cells and peer comparisons',
+        'SP04':'Radio signal and resource evidence',
+        'SP05':'Processing and compute evidence',
+        'SP06':'Transport diagnostic evidence',
+        'SP07':'Configuration diagnostic evidence',
+        'SP08':'CU-domain and boundary evidence',
+        'LOCAL_JOIN':'Specialist evidence consolidated',
+        'CU_JOIN':'CU evidence consolidated',
+        'DIRECT_JOIN':'Healthy network direct review',
+        'SUPERVISOR':'Correlation and root cause reasoning',
+        'FINAL':'Recorded investigation conclusion',
+    }
+    def arrow():
+        return ('<svg class="arrow" viewBox="0 0 32 24" aria-hidden="true">'
+                '<path d="M2 12h25m-9-8 9 8-9 8" fill="none" stroke="#8fbbce" '
+                'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>')
+    public_roles={'DIRECT_JOIN':'Direct Supervisor Review',
+                  'LOCAL_JOIN':'Specialist Evidence Consolidation',
+                  'CU_JOIN':'CU Evidence Consolidation'}
+    def public_role(agent):
+        return public_roles.get(agent,AGENT_ROLES[agent])
+    def tile(agent, kind):
+        if agent is None:
+            label='Investigation start' if kind=='previous' else 'Investigation complete'
+            detail='No preceding agent' if kind=='previous' else 'No further agent'
+            css='endpoint'
         else:
-            path=f'M {left} {ya} C {(left+right)/2:.0f} {ya}, {(left+right)/2:.0f} {yb}, {right} {yb}'
-        parts.append(f'<path d="{path}" stroke="{col}" stroke-width="{2.8 if is_done else 1.7}" fill="none" marker-end="url(#flowArrow)"/>')
-    for agent,(x,y) in p.items():
-        if agent==current:stroke='#46e6b5';fill='#154f62';status='IN FOCUS'
-        elif agent in completed:stroke='#22b995';fill='#1c4250';status='REVIEWED'
-        else:stroke='#53768b';fill='#172d42';status='QUEUED'
-        r=69 if agent.startswith('SP') or agent=='SUPERVISOR' else 63
-        height=43
-        if agent==current:
-            parts.append(f'<rect x="{x-r-5}" y="{y-27}" width="{2*r+10}" height="56" rx="15" fill="none" stroke="#46e6b5" stroke-width="2" class="activepulse"/>')
-        parts.append(f'<rect x="{x-r}" y="{y-22}" width="{2*r}" height="{height}" rx="10" fill="{fill}" stroke="{stroke}" stroke-width="2"/>')
-        # Public-friendly role names only; internal SP IDs remain in technical provenance.
-        name={'SP01':'Network Health','SP02':'Accessibility KPI','SP03':'Cell & Peer','SP04':'Radio Analysis',
-              'SP05':'Processing','SP06':'Transport','SP07':'Configuration','SP08':'CU & Boundary',
-              'SUPERVISOR':'RCA Supervisor','LOCAL_JOIN':'Evidence Join','CU_JOIN':'CU Join',
-              'DIRECT_JOIN':'Direct Review','FINAL':'Final RCA'}.get(agent,agent)
-        sub={'SP01':'ML + telemetry','SUPERVISOR':'Evidence synthesis','FINAL':'Recorded report',
-             'LOCAL_JOIN':'Evidence joined','CU_JOIN':'CU branch','DIRECT_JOIN':'Healthy control',
-             'SP02':'KPI evidence','SP03':'Cell comparisons','SP04':'Radio evidence',
-             'SP05':'Processing evidence','SP06':'Transport evidence','SP07':'Config evidence',
-             'SP08':'CU-domain evidence'}.get(agent,'')
-        parts.append(f'<text x="{x}" y="{y-4}" font-size="13.5" text-anchor="middle" font-weight="700" fill="#eaf6ff">{escape(name)}</text>')
-        parts.append(f'<text x="{x}" y="{y+11}" font-size="11" text-anchor="middle" fill="#a8cddd">{escape(sub)}</text>')
-        if agent==current:
-            parts.append(f'<text x="{x}" y="{y+46}" font-size="11" text-anchor="middle" fill="#51e8c2" font-weight="bold">{status}</text>')
-    parts.append('</svg>')
-    markup=''.join(parts)
-    style='''<style>body{margin:0;background:#0d1d30;font-family:system-ui,Arial,sans-serif} .frame{background:linear-gradient(130deg,#0c2135,#102c40);border:1px solid #284b62;border-radius:15px;padding:8px 8px 0}.activepulse{animation:pulse 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes pulse{0%,100%{opacity:.34}50%{opacity:1}}.foot{font:12px system-ui;color:#9ab9c6;margin:0 20px 10px}</style>'''
-    return '<!DOCTYPE html><html><head><meta charset="utf-8">'+style+'</head><body><div class="frame">'+markup+'<div class="foot">Agent routing from recorded LangGraph · animated highlighting indicates replay focus (not a live execution)</div></div></body></html>'
+            label=public_role(agent)
+            detail=role_detail.get(agent, '')
+            css='active' if kind=='current' else ('done' if agent in visited else 'queued')
+        status={'previous':'PREVIOUS','current':'IN FOCUS','next':'NEXT'}[kind]
+        return (f'<div class="agent {css}" role="group" aria-label="{escape(status+": "+label)}">'
+                f'<div class="step-label">{status}</div>'
+                f'<div class="agent-name">{escape(label)}</div>'
+                f'<div class="agent-detail">{escape(detail)}</div>'
+                '</div>')
+    route_kind = ('Sequential specialist investigation' if route_family=='LOCAL_SPECIALISTS'
+                  else 'CU-domain investigation' if route_family=='CU_SPECIALIST'
+                  else 'Healthy network direct review')
+    common="""<style>
+      *{box-sizing:border-box} html,body{margin:0;padding:0;background:transparent;color:#f0fbff;
+        font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+      .frame{border:1px solid #416378;border-radius:14px;background:linear-gradient(122deg,#0c2135,#133149);
+        padding:13px 14px;min-height:100%}
+      .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:12px}
+      .overline{color:#95c7d6;font-weight:800;letter-spacing:.08em;font-size:12px}
+      .step-count{color:#cae7ef;font-weight:650;font-size:12px;white-space:nowrap}
+      .focus-flow{display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1.32fr) 24px minmax(0,1fr);
+        gap:7px;align-items:stretch;width:100%}
+      .arrow{height:25px;width:24px;align-self:center}
+      .agent{min-width:0;min-height:140px;border-radius:10px;border:1px solid #5c7c90;
+        background:#19354a;padding:13px 11px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+      .agent.active{background:#175264;border:2px solid #61e9c9;box-shadow:0 0 0 2px rgba(97,233,201,.13);
+        padding:12px 10px}
+      .agent.done{border-color:#3b9f91;background:#1b444c}
+      .agent.endpoint{opacity:.7;border-style:dashed}
+      .step-label{color:#a4d5e2;font-size:11px;letter-spacing:.075em;font-weight:800}
+      .active .step-label{color:#91ffdf}
+      .agent-name{color:#f6ffff;font-size:14px;line-height:1.24;font-weight:760;overflow-wrap:anywhere}
+      .active .agent-name{font-size:16px;line-height:1.2}
+      .agent-detail{color:#b4d2df;font-size:11px;line-height:1.3;overflow-wrap:anywhere}
+      .bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px;
+        margin-top:10px;color:#b6d5e2;font-size:11px;line-height:1.3}
+      .route-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}
+      .route-chip{border:1px solid #587d8e;border-radius:9px;padding:10px 11px;color:#ddecf5;background:#1a374a;
+        font-size:13px;min-height:65px;display:flex;gap:9px;align-items:center}
+      .route-chip.active{border:2px solid #61e9c9;background:#175264;font-weight:700}
+      .route-chip.done{border-color:#3b9f91}
+      .ordinal{font-weight:800;color:#a9d6e4;font-size:12px}
+      @media(max-width:460px){.frame{padding:9px}.focus-flow{grid-template-columns:minmax(0,1fr) 17px minmax(0,1.3fr) 17px minmax(0,1fr);gap:4px}
+        .arrow{width:17px}.agent{padding:8px 6px}.active .agent-name{font-size:14px}.agent-name{font-size:12px}
+        .agent-detail{font-size:10px}}
+    </style>"""
+    if mode=='overview':
+        chips=[]
+        for i,agent in enumerate(route):
+            state='active' if agent==current else 'done' if agent in visited else 'queued'
+            chips.append(f'<div class="route-chip {state}"><span class="ordinal">{i+1:02d}</span>'
+                         f'<span>{escape(public_role(agent))}</span></div>')
+        body=(f'<div class="top"><span class="overline">FULL RECORDED ROUTE</span>'
+              f'<span class="step-count">{len(route)} recorded stages</span></div>'
+              f'<div class="route-grid">{"".join(chips)}</div>'
+              '<div class="bottom">Recorded LangGraph order · sequential specialist execution where applicable · not a live run</div>')
+    else:
+        prev_agent=route[selected-1] if selected>0 else None
+        next_agent=route[selected+1] if selected+1<len(route) else None
+        body=(f'<div class="top"><span class="overline">RECORDED AGENT WORKFLOW</span>'
+              f'<span class="step-count">Agent {selected+1} of {len(route)}</span></div>'
+              f'<div class="focus-flow">{tile(prev_agent,"previous")}{arrow()}'
+              f'{tile(current,"current")}{arrow()}{tile(next_agent,"next")}</div>'
+              f'<div class="bottom"><span>{escape(route_kind)}</span>'
+              '<span>Original recorded LangGraph · not live execution</span></div>')
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+common+'</head><body><div class="frame">'+body+'</div></body></html>'

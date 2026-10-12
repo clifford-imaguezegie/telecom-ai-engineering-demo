@@ -28,8 +28,10 @@ def test_sequential_recorded_specialist_spans(sid):
   assert datetime.fromisoformat(a['end_time']) <= datetime.fromisoformat(b['start_time'])
  svg=workflow_svg(c['route_family'],beats(c),len(beats(c))-1)
  # The visual now represents each successive specialist handover, not fan-out from SP01.
- assert '<svg' in svg and 'Evidence joined' in svg
- assert 'Parallel branches' not in svg
+ assert '<svg' in svg and 'IN FOCUS' in svg
+ overview=workflow_svg(c['route_family'],beats(c),len(beats(c))-1,mode='overview')
+ assert 'Specialist Evidence Consolidation' in overview
+ assert 'Parallel branches' not in svg and 'Sequential specialist investigation' in svg
 
 @pytest.mark.parametrize('sid',IDS)
 def test_exec_uses_original_beats_only_and_keeps_last_report(sid):

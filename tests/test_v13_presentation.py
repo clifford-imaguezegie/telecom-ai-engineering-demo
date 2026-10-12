@@ -68,9 +68,13 @@ def test_workflow_uses_readable_roles_and_keeps_ids():
         return json.load(gzip.open(ROOT/ref['file'],'rt'))
     story=build_story(case,evidence)
     svg=workflow_svg(case['route_family'],story,4)
+    assert 'IN FOCUS' in svg and 'RECORDED AGENT WORKFLOW' in svg
+    assert 'Network Health &amp; Localisation' in svg
+    overview=workflow_svg(case['route_family'],story,4,mode='overview')
     for text in ['Network Health','Accessibility KPI','Cell &amp; Peer','Radio Analysis',
-                 'Processing','Transport','Configuration','RCA Supervisor','ML + telemetry','Config evidence']:
-        assert text in svg
+                 'Processing','Transport','Configuration','RCA Supervisor']:
+        assert text in overview
+    assert 'Sequential specialist investigation' in svg
 
 
 def test_intro_and_close_show_on_landing_page(monkeypatch):

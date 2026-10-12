@@ -43,7 +43,10 @@ def test_each_storyboard_binds_to_original_evidence_and_route(sid):
  svg=workflow_svg(c['route_family'],beats,5)
  assert '<svg' in svg and 'IN FOCUS' in svg
  assert 'recorded LangGraph' in svg
- assert 'RCA Supervisor' in svg
+ assert 'RECORDED AGENT WORKFLOW' in svg
+ assert svg.count('class="agent ') == 3
+ overview=workflow_svg(c['route_family'],beats,5,mode='overview')
+ assert 'RCA Supervisor' in overview
  assert 'SP01' not in svg
  for b in beats:
   assert b['agent'] in AGENT_ROLES
