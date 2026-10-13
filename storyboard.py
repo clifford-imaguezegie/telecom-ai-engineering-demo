@@ -284,6 +284,15 @@ def workflow_svg(route_family, story, active_index, mode='focus'):
     public_roles={'DIRECT_JOIN':'Direct Supervisor Review',
                   'LOCAL_JOIN':'Specialist Evidence Consolidation',
                   'CU_JOIN':'CU Evidence Consolidation'}
+    # Compact names are visual-only for narrow mobile cards. The complete
+    # recorded role remains in the desktop label and accessible aria-label.
+    compact_roles={'SP01':'Network Health', 'SP02':'KPI Analysis',
+                   'SP03':'Cell & Peer', 'SP04':'Radio Analysis',
+                   'SP05':'Processing', 'SP06':'Transport',
+                   'SP07':'Configuration', 'SP08':'CU Analysis',
+                   'SUPERVISOR':'RCA Supervisor', 'LOCAL_JOIN':'Evidence Join',
+                   'CU_JOIN':'CU Evidence Join', 'DIRECT_JOIN':'Direct Review',
+                   'FINAL':'Final RCA Report'}
     def public_role(agent):
         return public_roles.get(agent,AGENT_ROLES[agent])
     def tile(agent, kind):
@@ -298,7 +307,8 @@ def workflow_svg(route_family, story, active_index, mode='focus'):
         status={'previous':'PREVIOUS','current':'IN FOCUS','next':'NEXT'}[kind]
         return (f'<div class="agent {css}" role="group" aria-label="{escape(status+": "+label)}">'
                 f'<div class="step-label">{status}</div>'
-                f'<div class="agent-name">{escape(label)}</div>'
+                f'<div class="agent-name"><span class="role-full">{escape(label)}</span>'
+                f'<span class="role-compact">{escape(compact_roles.get(agent,label))}</span></div>'
                 f'<div class="agent-detail">{escape(detail)}</div>'
                 '</div>')
     route_kind = ('Sequential specialist investigation' if route_family=='LOCAL_SPECIALISTS'
@@ -324,6 +334,7 @@ def workflow_svg(route_family, story, active_index, mode='focus'):
       .step-label{color:#a4d5e2;font-size:11px;letter-spacing:.075em;font-weight:800}
       .active .step-label{color:#91ffdf}
       .agent-name{color:#f6ffff;font-size:14px;line-height:1.24;font-weight:760;overflow-wrap:anywhere}
+      .role-compact{display:none}
       .active .agent-name{font-size:16px;line-height:1.2}
       .agent-detail{color:#b4d2df;font-size:11px;line-height:1.3;overflow-wrap:anywhere}
       .bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px;
@@ -336,7 +347,7 @@ def workflow_svg(route_family, story, active_index, mode='focus'):
       .ordinal{font-weight:800;color:#a9d6e4;font-size:12px}
       @media(max-width:460px){.frame{padding:9px}.focus-flow{grid-template-columns:minmax(0,1fr) 17px minmax(0,1.3fr) 17px minmax(0,1fr);gap:4px}
         .arrow{width:17px}.agent{padding:8px 6px}.active .agent-name{font-size:14px}.agent-name{font-size:12px}
-        .agent-detail{font-size:10px}}
+        .agent-detail{font-size:10px}.role-full{display:none}.role-compact{display:inline}}
     </style>"""
     if mode=='overview':
         chips=[]

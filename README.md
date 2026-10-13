@@ -1,5 +1,13 @@
 # TREAD AI — Telecom AI Engineering Platform
 
+## V1.4.3 — Post-Restart Timeline & Acceptance Readiness (13 October 2026)
+
+- Guided and standalone playback sliders now use Streamlit `on_change` callbacks to preserve user-selected stage positions across fragment refreshes. Playback controls explicitly synchronise slider position; automatic timed replay still updates both position and evidence.
+- Mobile-focused workflow cards use compact role names for legibility without discarding full accessible roles; frame height and native auto-sized full-route panels remain unchanged.
+- The CU-processing and congestion RCA summaries now contain concise qualifications of the **recorded** causal and ML-confidence language; source evidence is not edited.
+- **211 local automated tests** passed, including event-simulation regressions for seek after Restart. Twelve Chromium **component-only** checks at exact requested viewport sizes passed. These results do **not** replace live Streamlit acceptance or resolve the independent reviewer’s provisional release hold by themselves.
+- See [`V1_4_3_RELEASE_NOTES.md`](V1_4_3_RELEASE_NOTES.md) for the precise diagnosis, test limits, deployment and acceptance procedure.
+
 ## V1.4 — External visitor experience and recorded-execution integrity
 
 - **Branding:** Public interface and browser tab use TREAD AI; internal module numbers and trace IDs are retained only for provenance and source-code linkage.

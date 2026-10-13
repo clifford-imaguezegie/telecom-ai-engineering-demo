@@ -227,6 +227,10 @@ def render_rca_outcome(case):
         for v in (su.get('residual_uncertainty') or ['No further limitation recorded in the Supervisor final output.'])[:3]:st.markdown('• '+str(v))
         st.markdown('**Recommended engineering follow-up**')
         for v in (su.get('recommendations') or ['See original Supervisor report.'])[:2]:st.markdown('• '+str(v))
+    if case['scenario_id']=='M05I0005':
+        st.caption('Engineering interpretation: the recorded CU-CP delay, CPU, memory and queue increases support processing pressure, but do not independently prove resource exhaustion or the precise RRC failure mechanism. RRC NoReply/MaxRetrans cause counters and the initiating trigger were not established in this record.')
+    elif case['scenario_id']=='M05I0003':
+        st.caption('ML interpretation: the recorded fault-family support of 0.525 is modest and uncalibrated, not independent diagnostic certainty. Radio resource and accessibility measurements provide the stronger incident evidence; exact DRB failure-cause codes were not available.')
     st.caption('This summary is extracted from the recorded Supervisor output and is not a new RCA. A HIGH class is the agent’s recorded judgement, not independently calibrated probability or validation of the exact physical failure mechanism.')
 
 def kb_list(label, values, empty='Not recorded in this Supervisor output'):
@@ -359,6 +363,28 @@ def render_value_proposition():
  <p>Production MTTR, OPEX reduction, remediation and sustained monitoring outcomes require validation in an operating network;
  this is a recorded, inspectable investigation demonstration, not an operational SLA.</p></div>""",unsafe_allow_html=True)
 
+def _seek_from_widget(player_key, seek_key, last):
+    """Consume a user slider event before Streamlit rerenders its fragment.
+
+    Widget values must never be overwritten with a stale player index on
+    ordinary fragment refreshes. In particular, post-Restart dragging must
+    remain authoritative until the user makes another playback action.
+    """
+    play = st.session_state[player_key]
+    index = int(st.session_state[seek_key])
+    play['index'] = max(0, min(last, index))
+    play['playing'] = False
+    play['last_tick'] = time.monotonic()
+    if 'carry' in play:
+        play['carry'] = 0.
+
+
+def _set_playhead(play, seek_key, index, last):
+    """Synchronise the widget only when a playback control advances position."""
+    play['index'] = max(0, min(last, int(index)))
+    st.session_state[seek_key] = play['index']
+
+
 @st.fragment(run_every='1s')
 def cinematic_replay(sid):
  """Autoplay of saved evidence only. A refresh advances one authored beat, not a live run."""
@@ -369,37 +395,36 @@ def cinematic_replay(sid):
   st.session_state[key]={'index':0,'playing':False,'seconds':3,'last_tick':time.monotonic()}
  player=st.session_state[key]
  last=len(beats)-1
+ seek_key='cinema_seek_'+sid
+ if seek_key not in st.session_state:st.session_state[seek_key]=player['index']
  now=time.monotonic()
  if player['playing'] and now-player['last_tick']>=player['seconds']:
-  player['index']=min(last,player['index']+1)
+  _set_playhead(player,seek_key,player['index']+1,last)
   player['last_tick']=now
   if player['index']==last:player['playing']=False
 
  ctrl=st.columns([1.25,.9,.85,.85,1.6])
  with ctrl[0]:
   if st.button('⏸ Pause' if player['playing'] else '▶ Play',type='primary',use_container_width=True,key='cinema_play_'+sid):
-   if not player['playing'] and player['index']==last:player['index']=0
+   if not player['playing'] and player['index']==last:_set_playhead(player,seek_key,0,last)
    player['playing']=not player['playing']; player['last_tick']=time.monotonic()
    st.rerun(scope='fragment')
  with ctrl[1]:
   if st.button('◀ Back',disabled=player['index']==0,use_container_width=True,key='cinema_back_'+sid):
-   player['playing']=False; player['index']-=1;player['last_tick']=time.monotonic();st.rerun(scope='fragment')
+   player['playing']=False;_set_playhead(player,seek_key,player['index']-1,last);player['last_tick']=time.monotonic();st.rerun(scope='fragment')
  with ctrl[2]:
   if st.button('Next ▶',disabled=player['index']==last,use_container_width=True,key='cinema_next_'+sid):
-   player['playing']=False;player['index']+=1;player['last_tick']=time.monotonic();st.rerun(scope='fragment')
+   player['playing']=False;_set_playhead(player,seek_key,player['index']+1,last);player['last_tick']=time.monotonic();st.rerun(scope='fragment')
  with ctrl[3]:
   if st.button('↺ Restart',use_container_width=True,key='cinema_restart_'+sid):
-   player['index']=0;player['playing']=False;player['last_tick']=time.monotonic();st.rerun(scope='fragment')
+   _set_playhead(player,seek_key,0,last);player['playing']=False;player['last_tick']=time.monotonic();st.rerun(scope='fragment')
  with ctrl[4]:
   speed=st.selectbox('Pacing per beat',[2,3,5,8],index=[2,3,5,8].index(player['seconds']),format_func=lambda v:f'{v} seconds',label_visibility='collapsed',key='cinema_speed_'+sid)
   if speed!=player['seconds']:
    player['seconds']=speed;player['last_tick']=time.monotonic()
 
- seek_key='cinema_seek_'+sid
- st.session_state[seek_key]=player['index']
- seek=st.slider('Presentation timeline',min_value=0,max_value=last,format='%d',key=seek_key)
- if seek!=player['index']:
-  player['index']=seek;player['playing']=False;player['last_tick']=time.monotonic();st.rerun(scope='fragment')
+ st.slider('Presentation timeline',min_value=0,max_value=last,format='%d',key=seek_key,
+           on_change=_seek_from_widget,args=(key,seek_key,last))
  idx=player['index']
  beat=beats[idx]
  st.progress((idx+1)/len(beats),text=f'PLAYBACK {idx+1} / {len(beats)}  •  {"PLAYING" if player["playing"] else "PAUSED"}  •  {agent_label(beat["agent"])}')
@@ -538,7 +563,10 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
                                'carry':0.,'presentation_elapsed':0.}
     play=st.session_state[key]
     last=len(timeline)-1
+    seek_key=key+'_seek'
+    if seek_key not in st.session_state:st.session_state[seek_key]=play['index']
     now=time.monotonic()
+    before_tick=play['index']
     if play['playing']:
         dt=max(0.,min(now-play['last_tick'],3.))
         play['carry']+=dt
@@ -552,23 +580,27 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
         if play['index']>=last:
             play['playing']=False
             play['carry']=0.
+    if play['index']!=before_tick:
+        _set_playhead(play,seek_key,play['index'],last)
     play['last_tick']=now
 
     controls=st.columns([1.1,.85,.85,.9,1.45])
     with controls[0]:
         if st.button('⏸ Pause' if play['playing'] else '▶ Play',type='primary',use_container_width=True,key=key+'_play'):
-            if not play['playing'] and play['index']==last:play['index']=0;play['presentation_elapsed']=0.
+            if not play['playing'] and play['index']==last:
+                _set_playhead(play,seek_key,0,last);play['presentation_elapsed']=0.
             play['playing']=not play['playing'];play['carry']=0.;play['last_tick']=time.monotonic()
             st.rerun(scope='fragment')
     with controls[1]:
         if st.button('◀ Back',disabled=play['index']==0,use_container_width=True,key=key+'_back'):
-            play['playing']=False;play['index']-=1;play['carry']=0.;st.rerun(scope='fragment')
+            play['playing']=False;_set_playhead(play,seek_key,play['index']-1,last);play['carry']=0.;st.rerun(scope='fragment')
     with controls[2]:
         if st.button('Next ▶',disabled=play['index']==last,use_container_width=True,key=key+'_next'):
-            play['playing']=False;play['index']+=1;play['carry']=0.;st.rerun(scope='fragment')
+            play['playing']=False;_set_playhead(play,seek_key,play['index']+1,last);play['carry']=0.;st.rerun(scope='fragment')
     with controls[3]:
         if st.button('↺ Restart',use_container_width=True,key=key+'_restart'):
-            play.update({'index':0,'playing':False,'carry':0.,'presentation_elapsed':0.,'last_tick':time.monotonic()})
+            play.update({'playing':False,'carry':0.,'presentation_elapsed':0.,'last_tick':time.monotonic()})
+            _set_playhead(play,seek_key,0,last)
             st.rerun(scope='fragment')
     with controls[4]:
         speeds=[4,5,6,7,8] if executive else [3,5,7,10,14]
@@ -577,11 +609,8 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
                            format_func=lambda x:f'{x}s per presentation beat',
                            label_visibility='collapsed',key=key+'_pace')
         if speed!=play['seconds']:play['seconds']=speed;play['carry']=0.
-    seek_key=key+'_seek'
-    st.session_state[seek_key]=play['index']
-    changed=st.slider('Playback position',min_value=0,max_value=last,key=seek_key)
-    if changed!=play['index']:
-        play['index']=changed;play['playing']=False;play['carry']=0.;st.rerun(scope='fragment')
+    st.slider('Playback position',min_value=0,max_value=last,key=seek_key,
+              on_change=_seek_from_widget,args=(key,seek_key,last))
     idx=play['index'];item=timeline[idx];sid=item['scenario_id'];beat=item['beat'];case=healthy if sid==healthy_sid else incident
     durations=get_run_durations(case)
     scoped=timeline[:idx+1]
