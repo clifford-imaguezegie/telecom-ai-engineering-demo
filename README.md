@@ -1,3 +1,9 @@
+# TREAD AI V1.5.0 — Unified Investigation Cockpit
+
+**Latest packaged presentation release.** The Guided Operations Demo now displays the replay controls, current agent route and recorded input/action/output summaries in one compact desktop theatre. The platform remains an **offline, synthetic-network investigation replay**; no live network or AI model calls occur from the public app. For complete source messages, specialist inspection and the full route, expand the corresponding disclosures beneath the cockpit.
+
+The viewer can still choose Executive / Full Engineering and Healthy → Incident / Incident-only modes. All 136 frozen data files are unchanged from V1.4.3. See `V1_5_0_RELEASE_NOTES.md` for changes, QA limitations, and deployment guidance.
+
 # TREAD AI — Telecom AI Engineering Platform
 
 ## V1.4.3 — Post-Restart Timeline & Acceptance Readiness (13 October 2026)

@@ -90,6 +90,44 @@ h1,h2,h3{letter-spacing:-.025em}
 .wrap-value span{display:block;color:#496778;font-size:.78rem;margin-bottom:8px}
 .wrap-value strong{display:block;color:#14384c;font-size:1.12rem;line-height:1.28;overflow-wrap:anywhere;white-space:normal}
 [data-testid="stVerticalBlock"]{scroll-margin-top:1rem}
+
+/* V1.5.0 unified cockpit: compact presentation only; evidence and other pages retain layout. */
+.tread-guided-marker{display:none;height:0;overflow:hidden}
+.block-container:has(.tread-guided-marker){padding-top:.32rem;padding-bottom:1.2rem}
+.block-container:has(.tread-guided-marker) > [data-testid="stVerticalBlock"]{gap:.48rem!important}
+.cockpit-kicker{font-size:.67rem;font-weight:820;letter-spacing:.11em;color:#478296;text-transform:uppercase;margin:0 0 2px}
+.cockpit-heading{font-size:1.22rem;line-height:1.2;font-weight:790;color:#13354c;margin:0}
+.cockpit-guidance{font-size:.75rem;line-height:1.35;color:#5b7283;margin-top:3px}
+.cockpit-status{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;border:1px solid #346274;
+ background:linear-gradient(115deg,#102d43,#164450);color:white;border-radius:12px;padding:10px 15px;margin:2px 0 0}
+.cockpit-status .overline{font-size:.67rem;letter-spacing:.1em;color:#add6df;font-weight:750}
+.cockpit-status .name{font-size:1.04rem;font-weight:790;line-height:1.2;margin:2px 0}
+.cockpit-status .detail{font-size:.73rem;color:#cee5ed;line-height:1.3}
+.cockpit-status .right{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.cockpit-status .stat{min-width:70px;border-left:1px solid #527487;padding-left:10px}
+.cockpit-status .stat b{font-size:.97rem;font-variant-numeric:tabular-nums;display:block;line-height:1.25}
+.cockpit-status .stat span{font-size:.63rem;color:#c3d9e4;display:block;line-height:1.2}
+.cockpit-status .flag{font-size:.63rem;font-weight:790;padding:5px 8px;background:#1a5261;border:1px solid #5a9baa;border-radius:15px;white-space:nowrap}
+.cockpit-status .flag.alert{background:#794037;border-color:#c78875}
+.cockpit-timeline{font-size:.71rem;color:#456073;display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:-2px}
+.cockpit-timeline strong{color:#133d54}
+.cockpit-layout-label{font-size:.69rem;color:#557587;font-weight:650;margin-top:-2px}
+.cockpit-activity{height:250px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.cockpit-activity-head{font-size:.76rem;line-height:1.2;color:#17394f;font-weight:790;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.cockpit-activity-head small{font-size:.69rem;color:#637a89;font-weight:500;white-space:nowrap}
+.cockpit-activity-cards{display:grid;grid-template-rows:repeat(3,minmax(0,1fr));gap:5px;flex:1;min-height:0}
+.cockpit-evidence{border-radius:9px;padding:8px 10px;min-width:0;overflow:hidden;border:1px solid #315669;color:#eaf6fa;background:#123147}
+.cockpit-evidence.action{background:#153a4c}
+.cockpit-evidence.output{background:#124640;border-color:#2d766b}
+.cockpit-evidence .tag{font-size:.60rem;letter-spacing:.08em;text-transform:uppercase;font-weight:820;color:#a9d8e3;line-height:1.15}
+.cockpit-evidence.output .tag{color:#a6ebd5}
+.cockpit-evidence .value{font-size:.74rem;line-height:1.3;color:#edf9fd;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.cockpit-show-more{font-size:.67rem;color:#567284;line-height:1.2}
+.block-container:has(.tread-guided-marker) [data-testid="stSlider"]{padding-top:0!important;padding-bottom:0!important}
+.block-container:has(.tread-guided-marker) [data-testid="stButton"] button{min-height:2.1rem}
+.block-container:has(.tread-guided-marker) div[data-testid="stRadio"] > label{font-size:.74rem}
+@media(max-width:960px){.cockpit-status .right{gap:7px}.cockpit-status .stat{min-width:55px;padding-left:6px}}
+@media(max-width:740px){.cockpit-status .right{width:100%;justify-content:space-between}.cockpit-activity{height:auto;min-height:250px}.cockpit-evidence{min-height:73px}}
 </style>''',unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False)
@@ -363,6 +401,43 @@ def render_value_proposition():
  <p>Production MTTR, OPEX reduction, remediation and sustained monitoring outcomes require validation in an operating network;
  this is a recorded, inspectable investigation demonstration, not an operational SLA.</p></div>""",unsafe_allow_html=True)
 
+
+def cockpit_activity_html(beat, stage, total):
+    """Compact, source-grounded input/action/output cards for the visible cockpit.
+
+    This is display-only. Full saved text remains in the inspector below.
+    """
+    labels=(('input','INCOMING / HANDOVER','input'),
+            ('action','AGENT ACTION / TOOL','action'),
+            ('output','RECORDED RESULT','output'))
+    cards=[]
+    for kind,label,field in labels:
+        value=' '.join(friendly_replay_text(beat.get(field) or 'No separate field recorded for this stage.').split())
+        # Clamp the HTML payload as well as the visible two-line text; full original
+        # content is available below, and huge agent prompts need not enter the cockpit DOM.
+        short=value if len(value)<=360 else value[:359].rsplit(' ',1)[0].rstrip()+'…'
+        cards.append(f'<div class="cockpit-evidence {kind}"><div class="tag">{label}</div>'
+                     f'<div class="value" title="{escape(short,quote=True)}">{escape(short)}</div></div>')
+    return (f'<section class="cockpit-activity" aria-label="Recorded stage evidence">'
+            f'<div class="cockpit-activity-head">{escape(agent_label(beat["agent"]))}'
+            f'<small>Step {stage}/{total}</small></div>'
+            f'<div class="cockpit-activity-cards">{"".join(cards)}</div>'
+            '<div class="cockpit-show-more">Full messages and tool evidence below · source records unchanged</div></section>')
+
+
+def cockpit_status_html(item, case, status, alert, durations, elapsed, current_offset):
+    """One compact status strip in place of a full-page hero plus four metrics."""
+    return (f'<section class="cockpit-status" aria-label="Current recorded investigation status">'
+            f'<div><div class="overline">{escape(item["act"])} · RECORDED INVESTIGATION</div>'
+            f'<div class="name">{escape(case["title"])}</div>'
+            f'<div class="detail">{escape(case["scenario_id"])} · {escape(status)}</div></div>'
+            '<div class="right">'
+            f'<div class="stat"><b>{escape(format_clock(elapsed))}</b><span>Viewing timer</span></div>'
+            f'<div class="stat"><b>{escape(format_clock(durations["sp01"]))}</b><span>Original SP01</span></div>'
+            f'<div class="stat"><b>{escape(format_clock(durations["total"]))}</b><span>Original total</span></div>'
+            f'<div class="stat"><b>{escape(format_clock(current_offset))}</b><span>Trace offset</span></div>'
+            f'<span class="flag{" alert" if alert else ""}">{escape(status)}</span></div></section>')
+
 def _seek_from_widget(player_key, seek_key, last):
     """Consume a user slider event before Streamlit rerenders its fragment.
 
@@ -610,7 +685,7 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
                            label_visibility='collapsed',key=key+'_pace')
         if speed!=play['seconds']:play['seconds']=speed;play['carry']=0.
     st.slider('Playback position',min_value=0,max_value=last,key=seek_key,
-              on_change=_seek_from_widget,args=(key,seek_key,last))
+              label_visibility='collapsed',on_change=_seek_from_widget,args=(key,seek_key,last))
     idx=play['index'];item=timeline[idx];sid=item['scenario_id'];beat=item['beat'];case=healthy if sid==healthy_sid else incident
     durations=get_run_durations(case)
     scoped=timeline[:idx+1]
@@ -623,36 +698,22 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
     else:status='DEGRADATION IDENTIFIED'
     alert=material and assessed
     title='Network Health Assessment' if not material else 'Incident Investigation & Root Cause Analysis'
-    st.markdown(f"""<div class="ops-hero"><div class="ops-head"><div>
-      <div class="ops-eyebrow"><span class="ops-dot"></span>{escape(item['act'])} · RECORDED LANGGRAPH REPLAY</div>
-      <div class="ops-headline">{escape(title)}</div>
-      <div class="ops-sub">{escape(case['title'])}</div></div>
-      <div class="ops-pill{' alert' if alert else ''}">{escape(status)}</div></div> </div>""",unsafe_allow_html=True)
-    a,b,d,e=st.columns(4)
-    a.metric('Presentation timer',format_clock(play['presentation_elapsed']),help='Time spent watching playback, not original execution duration.')
-    b.metric('Recorded localisation runtime',format_clock(durations['sp01']),help='Original Network Health & Localisation Agent chain duration from LangSmith.')
-    d.metric('Recorded end-to-end RCA' if material else 'Recorded health-check duration',format_clock(durations['total']),help='Original completed LangGraph execution duration, independent of replay pacing.')
     exact=event_trace_offset(case,beat)
-    e.metric('Recorded event offset',format_clock(exact),help='Shows an exact recorded timestamp offset only when an original tool start or agent completion timestamp is available.')
-    st.progress((idx+1)/len(timeline),text=f'Guided journey {idx+1} / {len(timeline)} · {"PLAYING" if play["playing"] else "PAUSED"} · {agent_label(beat["agent"])}')
-    # Theatre: current workflow and its changing messages sit side-by-side, so
-    # viewers do not have to scroll between the graphic and the latest output.
-    graph,live=st.columns([1.36,1],gap='small')
+    st.markdown(cockpit_status_html(item,case,status,alert,durations,play['presentation_elapsed'],exact),unsafe_allow_html=True)
+    st.markdown(f'<div class="cockpit-timeline"><strong>Stage {idx+1} / {len(timeline)} · {"PLAYING" if play["playing"] else "PAUSED"}</strong>'
+                f'<span>Current: {escape(agent_label(beat["agent"]))} · recorded orchestration, not live execution</span></div>',unsafe_allow_html=True)
+    # Same-screen theatre: the complete focus workflow and synchronised evidence
+    # always occupy one row. Long source text and drill-down remain below.
+    graph,live=st.columns([1.2,1],gap='small')
+    case_beats=load_storyboard(sid)
+    active_index=next(i for i,b in enumerate(case_beats) if b['sequence']==beat['sequence'])
     with graph:
-        st.caption('Recorded orchestration · selected agent highlighted · sequential specialist execution in cell/site cases')
-        case_beats=load_storyboard(sid)
-        active_index=next(i for i,b in enumerate(case_beats) if b['sequence']==beat['sequence'])
         embed_workflow_html(workflow_svg(case['route_family'],case_beats,active_index),height=250,scrolling=False)
-        with st.expander('View complete recorded agent route',expanded=False):
-            st.html(workflow_overview_html(case_beats,active_index))
     with live:
-        st.markdown(f'**{escape(agent_label(beat["agent"]))}**')
-        st.caption(f'{beat["title"]} · Stage {idx+1}/{len(timeline)}')
-        panels=compact_beat_content(beat)
-        # Brief, readable previews scroll *inside* their cards; complete content
-        # is available below without losing the animation's current position.
-        st.markdown(''.join(panels),unsafe_allow_html=True)
-    st.caption('Recorded '+agent_label(beat['agent'])+' activity · '+('Executive cut: selected source-backed milestones.' if executive else 'Important findings have longer playback holds.')+' Pause or open the inspector to see the original record.')
+        st.markdown(cockpit_activity_html(beat,idx+1,len(timeline)),unsafe_allow_html=True)
+    st.caption('Full recorded route, complete stage messages, telemetry and engineer drill-down are below the cockpit. Pause or seek to inspect any recorded step.')
+    with st.expander('View complete recorded agent route',expanded=False):
+        st.html(workflow_overview_html(case_beats,active_index))
     with st.expander('Full current-stage messages and localisation evidence (click to inspect)',expanded=False):
         st.caption('Original trace provenance: '+beat['source'] + (' · '+beat['evidence_id'] if beat.get('evidence_id') else ''))
         st.markdown('**Incoming context / handover**')
@@ -722,7 +783,8 @@ st.sidebar.caption('RECORDED INVESTIGATION DEMO')
 st.sidebar.caption('No live agent, telemetry, LLM, API key or paid inference calls.')
 st.sidebar.caption('Synthetic experimental network • not production operations')
 
-st.markdown(f'''<div class="hero"><div class="eyebrow">TREAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TREAD AI — Telecom AI Engineering Platform</h1><div class="sub">Intelligent network assessment · ML-assisted localisation · Specialist AI investigation · Knowledge-grounded root cause analysis</div></div>''',unsafe_allow_html=True)
+if page!='Guided Operations Demo':
+ st.markdown(f'''<div class="hero"><div class="eyebrow">TREAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TREAD AI — Telecom AI Engineering Platform</h1><div class="sub">Intelligent network assessment · ML-assisted localisation · Specialist AI investigation · Knowledge-grounded root cause analysis</div></div>''',unsafe_allow_html=True)
 
 if page=='Platform Overview':
  heading('Discover TREAD AI','Network fault investigation often requires engineers to correlate radio, processing, transport and configuration evidence. See how agent-led ML, telemetry, specialised analysis and telecom knowledge produce a traceable RCA.')
@@ -737,21 +799,24 @@ if page=='Platform Overview':
  render_value_proposition()
 
 elif page=='Guided Operations Demo':
- st.caption('Recorded synthetic-network investigations · Select the executive overview or full engineering replay. Architecture and benchmarks are on **Platform Overview**.')
- heading('Guided Operations Demo','An animated, engineer-inspectable journey from network health assessment to evidence-grounded root cause analysis. All data comes from completed, independent LangGraph runs.')
+ st.markdown('<span class="tread-guided-marker" aria-hidden="true"></span><div class="cockpit-kicker">TREAD AI V1.5.0 · UNIFIED INVESTIGATION COCKPIT</div><div class="cockpit-heading">Guided Operations Demo</div>',unsafe_allow_html=True)
  main_sid=sid if sid!='M05I0017' else 'M05I0003'
- experience=st.radio('Visitor experience',['Executive overview (~90 seconds)','Full engineering replay'],horizontal=True)
- modes=['Healthy check → Separate incident','Incident investigation only'] if sid!='M05I0017' else ['Healthy check only']
- mode=st.radio('Presentation',modes,horizontal=True)
- if sid=='M05I0017':st.info('Healthy-control scenario selected. Choose an incident in the sidebar to show a complete health-to-incident demonstration.')
+ mode_col,scene_col=st.columns([1,1],gap='small')
+ with mode_col:
+  experience=st.radio('Visitor experience',['Executive overview (~90 seconds)','Full engineering replay'],horizontal=True)
+ with scene_col:
+  modes=['Healthy check → Separate incident','Incident investigation only'] if sid!='M05I0017' else ['Healthy check only']
+  mode=st.radio('Presentation',modes,horizontal=True)
+ if sid=='M05I0017':
+  st.caption('Healthy-control recording selected · No material incident. Choose another scenario for a healthy-to-incident demonstration.')
  elif mode==modes[0]:
-  st.info('**Two independent saved scenarios:** M05I0017 (healthy control), then '+main_sid+' ('+c['title']+'). The scene change is editorial, not an assertion that the healthy network developed a fault. The original 15-minute telemetry interval is independent of playback speed.')
+  st.caption('**Independent saved recordings:** M05I0017 (healthy), then '+main_sid+' ('+c['title']+'). The transition is editorial, not a fault arising in one live network. PM source periodicity: 15 minutes.')
  else:
-  st.caption('Single recorded incident investigation. The animated pace is for explanation, not a claim that the platform is running now.')
+  st.caption('Single saved synthetic-network incident · No live AI inference, telemetry retrieval, or investigation execution.')
  guided_operations_player(main_sid if sid!='M05I0017' else sid,mode==modes[0],executive=experience.startswith('Executive'))
- st.divider()
- render_value_proposition()
- st.markdown('**Want more detail?** Open **Agentic Replay** for every recorded call and stage, **Engineering Evidence** for source KPI series, or **Evaluation & Performance** for the original trace measurements and post-run checks.')
+ with st.expander('About this demonstration and next steps',expanded=False):
+  render_value_proposition()
+  st.markdown('Open **Agentic Replay** for every recorded call, **Engineering Evidence** for KPI series, **Root Cause Analysis** for diagnosis or **Evaluation & Performance** for trace measurements.')
 
 elif page=='Network Overview':
  heading('Network Overview','Nine independent synthetic-network snapshots, each with its own recorded observation window. Not a single continuous live network timeline.')
@@ -1022,7 +1087,9 @@ elif page=='Evaluation & Performance':
  score1.metric('Post-run judge score',f"{run.get('judge_score_out_of_5'):.2f} / 5" if run.get('judge_score_out_of_5') is not None else '—')
  score2.metric('Post-run exact match',f"{run.get('structured_exact_match_rate')*100:.1f}%" if run.get('structured_exact_match_rate') is not None else '—')
  score3.metric('Post-run deterministic checks',pretty(run.get('deterministic_status')))
- st.caption('The saved evaluation provides a summary score without the field-level match breakdown or full judging rubric. These values are not independent RCA accuracy; 75% exact match cannot be attributed to particular fields from this dataset alone.')
+ st.caption(f"The selected {sid} post-run result reports "
+            + (f"{run['structured_exact_match_rate']*100:.1f}% exact match" if run.get('structured_exact_match_rate') is not None else 'an unavailable exact-match rate')
+            + '. The full field-level breakdown and judging rubric are not included in this saved export; the percentage does not establish independent real-network RCA accuracy.')
  st.write('**Post-run path check:** '+str(run.get('path_check'))+'  ·  **Supervisor schema:** '+str(run.get('supervisor_schema'))+'  ·  **Post-run judge status:** '+str(run.get('judge_status')))
  st.caption(f"Source: saved notebook cell {run.get('notebook_source_cell')}, reported trace export {run.get('reported_trace_basename')}")
  st.divider();heading('Source provenance & verification')
