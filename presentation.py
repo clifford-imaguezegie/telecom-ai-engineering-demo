@@ -101,3 +101,55 @@ def benchmark_summary(cases):
         'sp01_max_seconds': max(sp01) if sp01 else None,
         'incident_max_seconds': max(complete) if complete else None,
     }
+
+
+PHASE_AGENTS = ('SP01', 'SP02', 'SP03', 'SP04', 'SP05', 'SP06', 'SP07', 'SP08', 'SUPERVISOR')
+
+def phase_execution_rows(cases):
+    """Recorded phase wall times; agent chain spans are not token/price metrics.
+
+    Phases derive from the depth-one chain records for each frozen scenario. The
+    specialist phase sums only recorded, sequential specialist spans; the
+    healthy route has no specialist phase. Root time includes orchestration.
+    """
+    rows = []
+    for case in cases:
+        chains = {n.get('name'): float(n['duration_seconds'])
+                  for n in case.get('observed_nodes', [])
+                  if n.get('run_type') == 'chain' and n.get('depth') == 1
+                  and n.get('name') in PHASE_AGENTS
+                  and isinstance(n.get('duration_seconds'), (int, float))}
+        incident = bool(case['derived_display']['incident_present'])
+        specialists = ['SP02','SP03','SP04','SP05','SP06','SP07'] if case.get('route_family') == 'cell_site' else ['SP08']
+        # Derive from actual child chains; do not invent a specialist for healthy.
+        active = [x for x in specialists if x in chains] if incident else []
+        # Fallback to observed agent IDs if the frozen export uses a different route label.
+        if incident and not active:
+            active = [x for x in ('SP02','SP03','SP04','SP05','SP06','SP07','SP08') if x in chains]
+        rows.append({
+            'scenario_id': case['scenario_id'], 'title': case['title'],
+            'incident': incident, 'route': case.get('route_family'),
+            'sp01_seconds': chains.get('SP01'),
+            'specialist_seconds': sum(chains[x] for x in active) if active else None,
+            'supervisor_seconds': chains.get('SUPERVISOR'),
+            'end_to_end_seconds': float(case['trace_duration_seconds']),
+            'specialist_agents': tuple(active),
+        })
+    return rows
+
+
+def phase_execution_ranges(cases):
+    """Return min/max independently for each phase across the appropriate cases."""
+    rows = phase_execution_rows(cases)
+    incidents = [r for r in rows if r['incident']]
+    def window(items, key):
+        nums = [float(r[key]) for r in items if r[key] is not None]
+        return {'min': min(nums), 'max': max(nums), 'count': len(nums)} if nums else None
+    return {
+        'sp01': window(rows, 'sp01_seconds'),
+        'specialists': window(incidents, 'specialist_seconds'),
+        'supervisor': window(incidents, 'supervisor_seconds'),
+        'incident': window(incidents, 'end_to_end_seconds'),
+        'healthy': window([r for r in rows if not r['incident']], 'end_to_end_seconds'),
+        'rows': rows,
+    }

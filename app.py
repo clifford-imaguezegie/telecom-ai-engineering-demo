@@ -11,7 +11,7 @@ from storyboard import AGENT_ROLES, build_story, workflow_svg, workflow_overview
 from operational_demo import (guided_sequence, executive_sequence, get_run_durations, event_trace_offset,
                               format_clock, sp01_tools_unlocked, available_agents)
 from html import escape
-from presentation import agent_label, format_duration, agent_execution_rows, benchmark_summary
+from presentation import agent_label, format_duration, agent_execution_rows, benchmark_summary, phase_execution_ranges
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -27,7 +27,7 @@ BASE = Path(__file__).resolve().parent
 DATA = BASE / 'data'
 PAGES = ['Platform Overview','Guided Operations Demo','Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
 
-st.set_page_config(page_title='TREAD AI | Telecom Investigation & RCA',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
+st.set_page_config(page_title='TEAD AI | Telecom Investigation & RCA',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
 st.markdown('''<style>
 .block-container {padding-top:1.5rem;padding-bottom:3rem;max-width:1500px}
 [data-testid="stSidebar"]{background:#101e30}
@@ -80,6 +80,91 @@ h1,h2,h3{letter-spacing:-.025em}
 .ops-value strong{font-size:1.1rem}
 .ops-value p{font-size:.84rem;color:#41645f;line-height:1.55}
 @media(max-width:760px){.ops-architecture{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.ops-milestone .number{font-size:1.2rem}}
+/* V1.6.1 — source-grounded, conditional infographic; all other pages/cockpit unchanged. */
+.tead-flow{--navy:#153a58;--mint:#20836f;--amber:#a86717;--violet:#7661bf;background:linear-gradient(180deg,#f7fbfe 0%,#eff6fb 100%);border:1px solid #cbdce9;border-radius:18px;padding:clamp(13px,2.0vw,25px);color:#173950;box-shadow:0 8px 26px rgba(18,58,83,.055)}
+.tead-flow *{box-sizing:border-box}
+.tead-flow .flow-topline{display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.tead-flow .flow-topline .label{font-size:.69rem;font-weight:850;color:#416f8f;letter-spacing:.10em;text-transform:uppercase}
+.tead-flow .flow-topline .note{font-size:.69rem;color:#55758a;line-height:1.4;max-width:410px;text-align:right}
+.tead-flow .flow-headline{font-size:1.23rem;line-height:1.15;font-weight:850;color:#103552;margin:4px 0}
+.tead-flow .flow-foundation{display:grid;grid-template-columns:1.06fr 52px 1fr;gap:8px;align-items:stretch;margin-bottom:14px}
+.tead-flow .flow-card{position:relative;background:#fff;border:1px solid #c8dce9;border-radius:13px;padding:14px;min-width:0;box-shadow:0 3px 10px rgba(23,65,96,.035)}
+.tead-flow .flow-card.sp01{background:linear-gradient(135deg,#edf7fd,#ffffff);border-color:#a5d4ec}
+.tead-flow .flow-card.route{background:linear-gradient(135deg,#f2effe,#ffffff);border-color:#d0c6f5}
+.tead-flow .flow-stage-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tead-flow .flow-stage-id{flex:none;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#23476f;color:#fff;font-weight:850;font-size:1.05rem}
+.tead-flow .flow-card.route .flow-stage-id{background:#7361bc}
+.tead-flow .flow-stage-title{font-weight:850;font-size:.96rem;line-height:1.24;color:#143954}
+.tead-flow .flow-stage-sub{font-size:.72rem;line-height:1.4;color:#536e80;margin-top:2px}
+.tead-flow .flow-inputs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
+.tead-flow .flow-input{border-radius:9px;background:#e8f3fb;border:1px solid #cfdfed;padding:8px 5px;text-align:center;min-width:0}
+.tead-flow .flow-input .symbol{display:block;font-size:1rem;color:#22658b;line-height:1.25}
+.tead-flow .flow-input b{display:block;font-size:.68rem;line-height:1.24;color:#153d5a;margin-top:4px}
+.tead-flow .flow-input span:last-child{display:block;font-size:.62rem;color:#527087;line-height:1.25;margin-top:3px}
+.tead-flow .flow-arrow-inline{display:flex;align-items:center;justify-content:center;color:#557b9f;font-weight:900;font-size:1.75rem;line-height:1}
+.tead-flow .flow-decision{display:flex;align-items:center;gap:12px;min-height:68px;border-radius:11px;border:1px solid #ddd4f4;background:#faf8ff;padding:9px 12px;margin-top:9px}
+.tead-flow .flow-decision-icon{flex:none;display:flex;align-items:center;justify-content:center;width:43px;height:43px;transform:rotate(45deg);border:2px solid #7053bf;border-radius:8px;background:#f0eafa;color:#5440a6}
+.tead-flow .flow-decision-icon span{transform:rotate(-45deg);font-weight:900;font-size:1.2rem}
+.tead-flow .flow-decision b{display:block;font-size:.87rem;color:#18394f}
+.tead-flow .flow-decision small{display:block;color:#5f6b8a;font-size:.70rem;line-height:1.4}
+.tead-flow .flow-routing-hint{border-radius:8px;background:#edeafc;margin-top:7px;padding:7px 9px;font-size:.70rem;color:#5a5190}
+.tead-flow .flow-to-routes{font-weight:830;color:#6e7684;font-size:.71rem;text-align:center;letter-spacing:.06em;margin:4px 0 8px}
+.tead-flow .flow-to-routes:before{content:'↓';display:block;font-size:1.1rem;color:#537698;line-height:1.3}
+.tead-flow .flow-network{display:grid;grid-template-columns:minmax(0,1fr) 38px minmax(225px,0.39fr);grid-template-rows:auto auto auto;gap:8px 3px;align-items:stretch}
+.tead-flow .flow-lane{display:flex;align-items:center;gap:12px;min-width:0;border:1px solid;border-radius:12px;padding:11px 12px;background:#fff}
+.tead-flow .flow-lane.healthy{background:#edfaf3;border-color:#acdcc0}
+.tead-flow .flow-lane.cell{background:#fff7e9;border-color:#eccf9b}
+.tead-flow .flow-lane.cu{background:#f4efff;border-color:#d2c3f2}
+.tead-flow .flow-lane .lane-mark{width:9px;border-radius:7px;align-self:stretch;flex:none;background:#2ba36e}
+.tead-flow .flow-lane.cell .lane-mark{background:#da963e}
+.tead-flow .flow-lane.cu .lane-mark{background:#9476cf}
+.tead-flow .lane-content{min-width:0;flex:1}
+.tead-flow .lane-head{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;align-items:baseline;margin-bottom:5px}
+.tead-flow .lane-head strong{font-size:.84rem;color:#14394d}
+.tead-flow .lane-head small{font-size:.69rem;color:#4f7180}
+.tead-flow .lane-details{font-size:.76rem;line-height:1.46;color:#3a5b6b}
+.tead-flow .flow-sequence{display:flex;align-items:stretch;gap:3px;margin-top:8px}
+.tead-flow .flow-agent{border:1px solid #e6c78c;background:#fffaf1;border-radius:8px;padding:7px 4px;flex:1 1 0;min-width:0;text-align:center}
+.tead-flow .flow-agent b{font-size:.72rem;display:block;color:#6c4419}
+.tead-flow .flow-agent span{display:block;font-size:.63rem;line-height:1.25;color:#6f5138;margin-top:2px;overflow-wrap:normal}
+.tead-flow .flow-step-arrow{flex:none;color:#9c7e55;font-size:.83rem;font-weight:900;display:flex;align-items:center;justify-content:center;width:10px}
+.tead-flow .flow-sp08{font-size:.83rem;font-weight:820;color:#523b91;padding:7px 12px;border:1px solid #d5c8ed;background:#fff;border-radius:8px;display:inline-flex;gap:8px;align-items:center;margin-top:4px}
+.tead-flow .flow-sp08 small{font-size:.70rem;font-weight:500;color:#6e6196}
+.tead-flow .flow-into-supervisor{font-size:1.55rem;color:#63839b;font-weight:900;display:flex;justify-content:center;align-items:center}
+.tead-flow .flow-into-supervisor.healthy{color:#26996c}
+.tead-flow .flow-into-supervisor.cell{color:#c98e31}
+.tead-flow .flow-into-supervisor.cu{color:#8869c5}
+.tead-flow .flow-convergence{grid-column:3;grid-row:1/span 3;border:1px solid #acd4cb;border-radius:13px;background:linear-gradient(145deg,#e8f8f2,#f9fdfd);padding:13px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-width:0}
+.tead-flow .flow-convergence .flow-stage-id{background:#17886d}
+.tead-flow .flow-synthesis-actions{display:grid;gap:6px;margin:8px 0}
+.tead-flow .flow-synthesis-actions span{display:block;padding:9px 9px;border-radius:8px;border:1px solid #cde8df;background:#fff;font-size:.72rem;line-height:1.38;color:#225e57}
+.tead-flow .flow-convergence-arrow{text-align:center;font-weight:850;color:#25816b;font-size:1.1rem;line-height:1.1}
+.tead-flow .flow-final{border:1px solid #1a7f7a;border-radius:11px;background:linear-gradient(130deg,#0e5c64,#0f7072);color:#fff;padding:12px}
+.tead-flow .flow-final .flow-stage-id{background:#fff;color:#0f636d;width:28px;height:28px;font-size:.88rem}
+.tead-flow .flow-final .flow-stage-title{color:#fff;font-size:.88rem}
+.tead-flow .flow-final p{font-size:.73rem;line-height:1.43;color:#e8faf8;margin:6px 0 0}
+.tead-flow .flow-support{margin-top:13px;border-top:1px solid #d0e1ec;padding-top:11px}
+.tead-flow .flow-support h4{font-size:.88rem;color:#214763;margin:0 0 7px}
+.tead-flow .flow-support-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.tead-flow .flow-support-item{border:1px solid #d6e2ed;border-radius:9px;background:#fff;padding:9px;font-size:.70rem;line-height:1.44;color:#466477}
+.tead-flow .flow-support-item strong{display:block;font-size:.74rem;color:#1b526b;margin-bottom:3px}
+.tead-flow .flow-caption{font-size:.70rem;color:#55778a;line-height:1.4;margin-top:10px}
+@media(max-width:1020px){.tead-flow .flow-foundation{grid-template-columns:1fr 25px 1fr}.tead-flow .flow-network{grid-template-columns:minmax(0,1fr) 26px minmax(210px,.42fr)}.tead-flow .flow-sequence{flex-wrap:wrap}.tead-flow .flow-agent{flex:1 0 24%}.tead-flow .flow-step-arrow{flex:0 0 9px}}
+@media(max-width:790px){.tead-flow .flow-foundation{grid-template-columns:1fr;gap:0}.tead-flow .flow-foundation > .flow-arrow-inline{transform:rotate(90deg);height:26px}.tead-flow .flow-network{grid-template-columns:minmax(0,1fr);grid-template-rows:auto}.tead-flow .flow-convergence{grid-column:auto;grid-row:auto}.tead-flow .flow-into-supervisor{display:none}.tead-flow .flow-lane{position:relative;margin-bottom:9px}.tead-flow .flow-lane:after{content:"↘ To Supervisor";position:absolute;bottom:-13px;right:12px;background:#f7fbfe;border:1px solid #d4e1eb;border-radius:20px;padding:2px 8px;font-size:.61rem;font-weight:780;color:#436980}.tead-flow .flow-convergence:before{content:"↓ SELECTED ROUTE CONVERGES HERE";text-align:center;font-size:.67rem;font-weight:820;color:#23745f}.tead-flow .flow-sequence{flex-wrap:nowrap}.tead-flow .flow-agent{flex:1 1 0}.tead-flow .flow-support-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tead-flow .flow-topline .note{text-align:left}}
+@media(max-width:520px){.tead-flow .flow-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}.tead-flow .flow-sequence{flex-direction:column;gap:3px}.tead-flow .flow-step-arrow{transform:rotate(90deg);height:11px;width:auto}.tead-flow .flow-agent{flex:auto;padding:8px}.tead-flow .flow-support-grid{grid-template-columns:1fr}.tead-flow .flow-lane{padding:10px 8px}.tead-flow .flow-stage-title{font-size:.91rem}.tead-flow .flow-decision{align-items:start}}
+.tead-performance{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}
+.tead-performance-card{border:1px solid #d0e0e8;border-radius:12px;padding:14px;background:#f8fbfd;color:#173950}
+.tead-performance-card .label{font-size:.78rem;color:#496a7e;font-weight:700}
+.tead-performance-card .threshold{font-size:1.65rem;font-weight:800;letter-spacing:-.035em;line-height:1.25;margin:6px 0}
+.tead-performance-card .limits{display:flex;flex-wrap:wrap;justify-content:space-between;gap:5px 10px;font-size:.76rem;border-top:1px solid #d9e7ed;padding-top:8px}
+.tead-lesson-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}
+.tead-lesson{padding:14px;border:1px solid #d1e1e8;border-radius:12px;background:#f8fbfd;color:#24475c}
+.tead-lesson strong{font-size:.89rem;color:#153b51;display:block;margin-bottom:5px}
+.tead-lesson p{font-size:.8rem;line-height:1.5;margin:5px 0}
+.tead-footnote{font-size:.75rem;line-height:1.48;color:#657987}
+@media(max-width:1150px){.tead-flow-grid{grid-template-columns:1fr;gap:7px}.tead-flow-arrow{transform:rotate(90deg);height:19px}.tead-flow-stage{padding:11px}.tead-capabilities{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.tead-performance,.tead-lesson-grid,.tead-capabilities{grid-template-columns:1fr}.tead-performance-card .threshold{font-size:1.45rem}}
+
 .ops-kpi{border:1px solid #365e6c;background:#173244;border-radius:12px;padding:.9rem;height:100%;color:#f0fbff;min-height:112px}
 .ops-kpi .name{font-size:.72rem;letter-spacing:.06em;color:#a6c9d5;text-transform:uppercase}
 .ops-kpi .value{font-size:1.12rem;font-weight:800;margin:.5rem 0 .2rem;overflow-wrap:anywhere}
@@ -337,6 +422,132 @@ def compact_beat_content(beat):
          card('action','Agent action / tool call',beat.get('action')),
          card('output','Recorded output / feedback',beat.get('output'),450))
 
+
+def render_investigation_flow():
+    """Responsive static infographic of the actual three alternative trace routes.
+
+    The runtime architecture and recorded execution data are unchanged. The
+    desktop panel emphasises true route convergence; mobile stacks the lanes.
+    """
+    st.subheader('End-to-End Investigation Flow')
+    st.caption('An evidence-grounded execution story: assessment → conditional routing → the selected investigation route → Supervisor synthesis → recorded RCA.')
+    st.markdown("""<section class="tead-flow" role="group" aria-label="TEAD AI investigation flow with conditional healthy, cell-site and CU-domain paths">
+  <div class="flow-topline"><div><div class="label">TEAD AI · RECORDED NETWORK INVESTIGATIONS</div><div class="flow-headline">From network evidence to a traceable diagnosis</div></div><div class="note">Three alternative routes, one evidence-grounded conclusion.<br>Illustrates completed synthetic-network LangGraph runs, not live inference.</div></div>
+  <div class="flow-foundation">
+    <div class="flow-card sp01"><div class="flow-stage-head"><span class="flow-stage-id">1</span><div><div class="flow-stage-title">Network Assessment &amp; Localisation</div><div class="flow-stage-sub">SP01 · Network Health &amp; Localisation Agent</div></div></div><div class="flow-stage-sub">Assess the 15-minute observation window, check network health and identify the affected fault family and scope.</div>
+      <div class="flow-inputs"><div class="flow-input"><span class="symbol">◈</span><b>ML 01</b><span>Fault-family support</span></div><div class="flow-input"><span class="symbol">◎</span><b>ML 02</b><span>Affected-scope support</span></div><div class="flow-input"><span class="symbol">▥</span><b>Network</b><span>Overview telemetry</span></div><div class="flow-input"><span class="symbol">⌁</span><b>Events</b><span>Event telemetry</span></div></div>
+    </div>
+    <div class="flow-arrow-inline" aria-hidden="true">➜</div>
+    <div class="flow-card route"><div class="flow-stage-head"><span class="flow-stage-id">2</span><div><div class="flow-stage-title">Intelligent Routing</div><div class="flow-stage-sub">Conditional decision from SP01 evidence</div></div></div>
+      <div class="flow-decision"><div class="flow-decision-icon" aria-hidden="true"><span>?</span></div><div><b>Incident detected?</b><small>No → healthy direct review · Yes → investigate the supported cell/site or CU-domain scope</small></div></div>
+      <div class="flow-routing-hint">Select exactly one recorded route for the case. Cell/site and CU paths are alternatives, not sequential stages.</div>
+    </div>
+  </div>
+  <div class="flow-to-routes" aria-hidden="true">CONDITIONAL INVESTIGATION ROUTES</div>
+  <div class="flow-network">
+    <div class="flow-lane healthy"><div class="lane-mark"></div><div class="lane-content"><div class="lane-head"><strong>✓ Healthy network</strong><small>NO INCIDENT · SP01 → SUPERVISOR</small></div><div class="lane-details">No specialist escalation. The assessment goes directly to Supervisor review and a no-incident conclusion.</div></div></div>
+    <div class="flow-into-supervisor healthy" aria-hidden="true">➜</div>
+    <div class="flow-lane cell"><div class="lane-mark"></div><div class="lane-content"><div class="lane-head"><strong>3 · Cell / Site Investigation</strong><small>INCIDENT · SIX SEQUENTIAL SPECIALISTS</small></div><div class="lane-details">Domain evidence is investigated in the original recorded order:</div>
+      <div class="flow-sequence" aria-label="SP02 KPI, then SP03 Cell and Peer, then SP04 Radio, then SP05 Processing, then SP06 Transport, then SP07 Configuration">
+        <div class="flow-agent"><b>SP02</b><span>KPI</span></div><div class="flow-step-arrow" aria-hidden="true">➜</div><div class="flow-agent"><b>SP03</b><span>Cell &amp; Peer</span></div><div class="flow-step-arrow" aria-hidden="true">➜</div><div class="flow-agent"><b>SP04</b><span>Radio</span></div><div class="flow-step-arrow" aria-hidden="true">➜</div><div class="flow-agent"><b>SP05</b><span>Processing</span></div><div class="flow-step-arrow" aria-hidden="true">➜</div><div class="flow-agent"><b>SP06</b><span>Transport</span></div><div class="flow-step-arrow" aria-hidden="true">➜</div><div class="flow-agent"><b>SP07</b><span>Configuration</span></div>
+      </div></div></div>
+    <div class="flow-into-supervisor cell" aria-hidden="true">➜</div>
+    <div class="flow-lane cu"><div class="lane-mark"></div><div class="lane-content"><div class="lane-head"><strong>3 · CU-Domain Investigation</strong><small>INCIDENT · ALTERNATIVE SPECIALIST PATH</small></div><div class="flow-sp08"><span>SP08</span><small>CU-Domain &amp; Boundary Analysis</small></div><div class="lane-details">CU and boundary evidence are investigated without invoking SP02–SP07 for this route.</div></div></div>
+    <div class="flow-into-supervisor cu" aria-hidden="true">➜</div>
+    <div class="flow-convergence"><div><div class="flow-stage-head"><span class="flow-stage-id">4</span><div><div class="flow-stage-title">Supervisor · Evidence Synthesis</div><div class="flow-stage-sub">Every selected route terminates here</div></div></div>
+      <div class="flow-synthesis-actions"><span>▣ Consolidate recorded evidence and specialist findings</span><span>≋ Examine supporting and competing explanations</span><span>▤ Apply knowledge-base RAG support when applicable</span><span>✓ Preserve missing measurements and uncertainty</span></div></div>
+      <div class="flow-convergence-arrow" aria-hidden="true">↓</div>
+      <div class="flow-final"><div class="flow-stage-head"><span class="flow-stage-id">5</span><div><div class="flow-stage-title">Recorded Root Cause Analysis</div></div></div><p>Finding or healthy outcome · Affected scope · Supporting evidence · Alternatives · Confidence qualification · Traceability</p></div>
+    </div>
+  </div>
+  <div class="flow-support"><h4>Supporting capabilities · used when required, not extra execution stages</h4><div class="flow-support-grid">
+    <div class="flow-support-item"><strong>▦ Network evidence</strong>15-minute synthetic 5G telemetry, original measurements, tool responses and case scope</div>
+    <div class="flow-support-item"><strong>⚙ ML &amp; domain tools</strong>SP01-invoked prediction tools and specialist engineering measurements</div>
+    <div class="flow-support-item"><strong>▤ Knowledge &amp; context</strong>Curated RAG contributions only where recorded; not proof of causal accuracy</div>
+    <div class="flow-support-item"><strong>◎ Evaluation &amp; provenance</strong>Saved LangSmith traces, measured execution times, original evidence and post-run evaluation</div>
+  </div>
+  <div class="flow-caption">Arrows represent alternative recorded routes converging on one Supervisor. The six cell/site specialists run sequentially; SP08 is a separate CU-domain path. The healthy control bypasses specialist investigation. Nothing on this page invokes a live agent, telemetry service or LLM.</div>
+</section>""", unsafe_allow_html=True)
+    st.caption('Original trace evidence is retained in the scenario, replay and engineering-evidence pages. This diagram explains orchestration; it does not claim real-time network automation or validated production performance.')
+
+
+def _mmss(seconds, decimals=1):
+    if seconds is None:
+        return '—'
+    minutes = int(float(seconds) // 60)
+    remain = float(seconds) - minutes * 60
+    return f'{minutes:02d}:{remain:04.{decimals}f}'
+
+
+def render_execution_performance(cases):
+    """Data-derived min/max from the exact nine bundled frozen case records."""
+    metrics = phase_execution_ranges(cases)
+    st.subheader('Recorded Execution Performance')
+    st.caption('Minimum and maximum observed across nine completed experimental scenarios. Headline is the next whole-second upper threshold, not a production SLA.')
+    specs = [
+        ('Network Assessment &amp; Localisation · SP01', 'sp01', '&lt; 00:25', 'All recorded cases'),
+        ('Specialist Investigation · SP02–SP08', 'specialists', '&lt; 01:52', 'Eight incident cases'),
+        ('Evidence Synthesis &amp; RCA · Supervisor', 'supervisor', '&lt; 02:54', 'Eight incident cases'),
+        ('End-to-End Incident Investigation', 'incident', '&lt; 04:33', 'Eight incident cases'),
+    ]
+    cards = []
+    for label, key, threshold, scope in specs:
+        measurement = metrics[key]
+        if not measurement:
+            continue
+        # Keep the original public < threshold motif, but derive its limit from the actual max.
+        from math import floor
+        upper = floor(measurement['max']) + 1
+        mm, ss = divmod(upper, 60)
+        bound = f'&lt; {mm:02d}:{ss:02d}'
+        cards.append(f'<div class="tead-performance-card"><div class="label">{label}</div><div class="threshold">{bound}</div>'
+                     f'<div class="limits"><span>Minimum observed: <b>{_mmss(measurement["min"])}</b></span>'
+                     f'<span>Maximum observed: <b>{_mmss(measurement["max"])}</b></span></div>'
+                     f'<div class="tead-footnote">{scope} · n={measurement["count"]}</div></div>')
+    st.markdown('<div class="tead-performance">'+''.join(cards)+'</div>',unsafe_allow_html=True)
+    healthy = metrics['healthy']
+    if healthy:
+        st.caption(f'Healthy control: {_mmss(healthy["min"])} end-to-end (no specialist route). Phase ranges can come from different cases and must not be summed. The full trace includes small orchestration overhead; saved judge evaluation is post-run.')
+    st.caption('These are observed LangSmith chain times on synthetic cases, not live-network diagnostic accuracy, a guaranteed response time or demonstrated MTTR/OPEX savings. Playback viewing time is separate.')
+
+
+def render_platform_learnings():
+    st.subheader('Key Learnings from Network Investigations')
+    st.caption('Lessons derived from the nine recorded investigation traces; observations are not proof of production impact.')
+    lessons = [
+        ('Fast initial localisation', 'SP01 consistently completed within 25 seconds across the nine recorded scenarios; its two ML predictions are supporting signals alongside telemetry.'),
+        ('Conditional routing avoids unnecessary work', 'The healthy control reached direct Supervisor review; incidents followed cell/site or CU-domain specialist paths appropriate to their recorded scope.'),
+        ('Multi-domain corroboration matters', 'Specialists compared supporting and competing explanations across radio, KPI, processing, transport, configuration and CU evidence rather than trusting a single anomaly.'),
+        ('Supervisor synthesis dominates time', 'In incident runs, Supervisor RCA was a substantial share of wall time. Context engineering and synthesis efficiency deserve targeted benchmarking.'),
+        ('Uncertainty and provenance are essential', 'Saved conclusions disclose unavailable failure-cause counters, uncertainty and the distinction between recorded judgement and calibrated confidence.'),
+    ]
+    st.markdown('<div class="tead-lesson-grid">'+''.join(
+        f'<div class="tead-lesson"><strong>{escape(title)}</strong><p>{escape(detail)}</p></div>' for title,detail in lessons
+        )+'</div>',unsafe_allow_html=True)
+
+
+def render_engineering_learnings():
+    st.subheader('Engineering Learnings — Efficiency, Tokens & Cost')
+    st.caption('Development learnings from M05_06C / M05_06D optimisation work. These are distinct from the nine public replay measurements.')
+    blocks = [
+       ('~98.7% smaller evidence representation', 'A historical SP08 experimental representation reduced raw CU-domain evidence from approximately 17.29 MB to 227 KB through deterministic restructuring. This is byte-size reduction, NOT proven token/cost savings.'),
+       ('Context should be engineered, not simply enlarged', 'Earlier SP02 experiments encountered an approximately 195,500-token request with a 4,096-token output ceiling. Deduplicated, lossless engineer-view tables now prepare structured evidence for model reasoning.'),
+       ('Inference cost requires explicit controls', 'Early experiments exposed expensive provider routing, extra self-validation passes and corrective retries. Cost controls favour bounded calls, logged failures and avoiding repeated large-context inference.'),
+       ('Right-size the model to the agent task', 'Development evaluated Gemma 12B/26B/31B options. Model selection must compare reasoning correctness, structured-output compliance, tool behaviour, latency and cost on matched scenarios.'),
+       ('Technical resilience matters', 'A JSON parse failure showed that removing excessive retries is not the same as removing all recovery. Bounded technical retries and visible error reporting help avoid blocked handovers.'),
+       ('Optimise evidence first, then measure quality', 'Deterministic evidence restructuring retains original raw records for audit while keeping root-cause interpretation with specialists and Supervisor. Quantify quality, token count, cost and latency together.'),
+    ]
+    st.markdown('<div class="tead-lesson-grid">'+''.join(
+       f'<div class="tead-lesson"><strong>{escape(title)}</strong><p>{escape(detail)}</p></div>' for title,detail in blocks
+       )+'</div>',unsafe_allow_html=True)
+    with st.expander('Engineering measurement boundaries and next optimisation experiments',expanded=False):
+        st.markdown("""**Measured historical example:** the SP08 payload-size reduction concerns the encoded evidence representation; it is not a measured model-token reduction, cost saving or proof that quality was unchanged.
+
+**Engineering controls observed or developed:** deterministic lossless engineer views, bounded evidence requests, no routine second validation pass, restrictive provider routing, response-format checks and explicit technical failure logging. They are architecture changes, not proof of a particular percentage saving.
+
+**Next benchmark:** compare matched M05_06C and M05_06D scenarios on input/output tokens, number of model calls, actual billed cost, p50/p95 latency, retries, completion success, evidence recall, localisation correctness and RCA quality. Preserve prompt/model/provider configuration and separate diagnostic evaluation from runtime inference.
+
+**Interpretation:** the public recorded demo does not run inference. Its exported child-token and cost fields are incomplete and must not be used as evidence of free inference or quantified savings.""")
 
 def architecture_diagram():
     """Reader-friendly architecture, with SP01 as initiator of BOTH ML calls and telemetry.
@@ -762,7 +973,7 @@ def sync_scenario_picker(widget_key):
     if st.session_state.get(widget_key)!=canonical:
         st.session_state[widget_key]=canonical
 
-st.sidebar.markdown('### ◈ TREAD AI')
+st.sidebar.markdown('### ◈ TEAD AI')
 st.sidebar.caption('Telecom AI Engineering Platform')
 st.sidebar.divider()
 if 'requested_page' in st.session_state:
@@ -784,22 +995,32 @@ st.sidebar.caption('No live agent, telemetry, LLM, API key or paid inference cal
 st.sidebar.caption('Synthetic experimental network • not production operations')
 
 if page!='Guided Operations Demo':
- st.markdown(f'''<div class="hero"><div class="eyebrow">TREAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TREAD AI — Telecom AI Engineering Platform</h1><div class="sub">Intelligent network assessment · ML-assisted localisation · Specialist AI investigation · Knowledge-grounded root cause analysis</div></div>''',unsafe_allow_html=True)
+ st.markdown(f'''<div class="hero"><div class="eyebrow">TEAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TEAD AI — Telecom AI Engineering Platform</h1><div class="sub">Intelligent network assessment · ML-assisted localisation · Specialist AI investigation · Knowledge-grounded root cause analysis</div></div>''',unsafe_allow_html=True)
 
 if page=='Platform Overview':
- heading('Discover TREAD AI','Network fault investigation often requires engineers to correlate radio, processing, transport and configuration evidence. See how agent-led ML, telemetry, specialised analysis and telecom knowledge produce a traceable RCA.')
+ heading('Discover TEAD AI','Network fault investigation often requires engineers to correlate radio, processing, transport and configuration evidence. See how agent-led ML, telemetry, specialised analysis and telecom knowledge produce a traceable RCA.')
  render_solution_intro([load_case(x) for x in manifest['scenario_order']],include_architecture=False)
  st.markdown('### Choose your experience')
  st.write('Follow the Network Health & Localisation Agent through its two ML predictions, network telemetry, specialist analysis, knowledge-grounded reasoning and final RCA. Pause anywhere to inspect the original evidence.')
  if st.button('▶ Watch the investigation',type='primary',use_container_width=True):
   st.session_state['requested_page']='Guided Operations Demo';st.rerun()
  st.divider()
- architecture_diagram()
+ render_investigation_flow()
+ st.divider()
+ render_execution_performance([load_case(x) for x in manifest['scenario_order']])
+ st.divider()
+ render_platform_learnings()
+ st.divider()
+ render_engineering_learnings()
+ st.divider()
+ with st.expander('Detailed Architecture — original technical explanation (preserved)',expanded=False):
+  architecture_diagram()
  st.divider()
  render_value_proposition()
+ st.caption('Future development: live adapters, operational resilience, measured inference economics, evidence sufficiency and policy-bounded actions require separate testing before production claims.')
 
 elif page=='Guided Operations Demo':
- st.markdown('<span class="tread-guided-marker" aria-hidden="true"></span><div class="cockpit-kicker">TREAD AI V1.5.0 · UNIFIED INVESTIGATION COCKPIT</div><div class="cockpit-heading">Guided Operations Demo</div>',unsafe_allow_html=True)
+ st.markdown('<span class="tread-guided-marker" aria-hidden="true"></span><div class="cockpit-kicker">TEAD AI V1.6.1 · UNIFIED INVESTIGATION COCKPIT</div><div class="cockpit-heading">Guided Operations Demo</div>',unsafe_allow_html=True)
  main_sid=sid if sid!='M05I0017' else 'M05I0003'
  mode_col,scene_col=st.columns([1,1],gap='small')
  with mode_col:
@@ -1079,6 +1300,16 @@ elif page=='Evaluation & Performance':
  tokens=pd.to_numeric(nodes.loc[nodes['run_type']=='llm','total_tokens'],errors='coerce').dropna()
  if len(tokens):st.caption(f"Summed reported tokens across LLM node records (not a billing estimate): {int(tokens.sum()):,}.")
  else:st.caption('No complete per-LLM token counts were recorded in exported child nodes. No synthetic usage estimate is shown.')
+ with st.expander('Cross-scenario phase timing breakdown (nine recorded runs)',expanded=False):
+  phases=phase_execution_ranges([load_case(x) for x in manifest['scenario_order']])
+  table=[]
+  for record in phases['rows']:
+   table.append({'Case':record['scenario_id'], 'Scenario':record['title'], 'SP01 (s)':round(record['sp01_seconds'],2) if record['sp01_seconds'] is not None else None,
+                 'Specialists (s)':round(record['specialist_seconds'],2) if record['specialist_seconds'] is not None else None,
+                 'Supervisor (s)':round(record['supervisor_seconds'],2) if record['supervisor_seconds'] is not None else None,
+                 'Total (s)':round(record['end_to_end_seconds'],2)})
+  st.dataframe(pd.DataFrame(table),hide_index=True,use_container_width=True)
+  st.caption('Depth-one agent chain wall times from original traces; incident specialist time is the sum of sequential participating specialists. Per-phase extrema can belong to different runs. Root duration includes orchestration; judge assessment occurs later.')
  heading('Saved post-run notebook evaluation')
  if not run.get('matches_selected_trace_filename'):
   st.warning('The saved notebook export reference differs from the selected trace. Treat the evaluation as unmatched until reconciled.')
@@ -1106,4 +1337,4 @@ elif page=='Evaluation & Performance':
  st.caption('V2 (deferred) would require live retrieval/authentication, LangGraph execution, MCP adapters, access policies, observability, and cost controls. None are enabled in V1.')
 
 st.divider()
-st.caption('TREAD AI • RECORDED INVESTIGATION REPLAY • SYNTHETIC TEST NETWORK • ALL TIMESTAMPS IN UTC')
+st.caption('TEAD AI • RECORDED INVESTIGATION REPLAY • SYNTHETIC TEST NETWORK • ALL TIMESTAMPS IN UTC')

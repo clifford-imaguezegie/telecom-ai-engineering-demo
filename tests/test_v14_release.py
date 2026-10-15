@@ -56,8 +56,8 @@ def test_v14_pages_render_without_exception(monkeypatch,page):
 
 def test_public_app_has_external_brand_and_no_module_banner():
  src=APP.read_text('utf-8')
- assert "st.sidebar.markdown('### ◈ TREAD AI')" in src
- assert 'TREAD AI · TELECOM ENGINEERING INTELLIGENCE' in src
+ assert "st.sidebar.markdown('### ◈ TEAD AI')" in src
+ assert 'TEAD AI · TELECOM ENGINEERING INTELLIGENCE' in src
  assert 'Telecom AI Engineering / Module 5' not in src
  assert 'TELECOM AI ENGINEERING • MODULE 5' not in src
  assert 'Agentic Investigation Replay' in src

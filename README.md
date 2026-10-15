@@ -1,10 +1,24 @@
-# TREAD AI V1.5.0 — Unified Investigation Cockpit
+# TEAD AI V1.6.1 — Connected Conditional Investigation Flow
+
+**Latest presentation refinement.** The Platform Overview now has a genuinely connected infographic: SP01 health and localisation → conditional Healthy / Cell-Site / CU routes → one Supervisor → recorded RCA. The six cell/site specialists are explicitly sequential, SP08 is an alternative CU investigation, and the healthy control goes directly to review. Supporting tools, knowledge and evaluation are shown separately from execution. All V1.6.0 performance and learnings content, the preserved original technical architecture, the V1.5.0 unified cockpit and all recorded data remain unchanged. See `V1_6_1_RELEASE_NOTES.md` for test and deployment information. **Live Streamlit acceptance remains pending.**
+
+---
+
+# TEAD AI V1.6.0 — End-to-End Flow, Recorded Performance & Engineering Learnings
+
+**Latest packaged public presentation release.** Rebrands the visible interface from TREAD AI to **TEAD AI** while preserving the V1.5.0 Unified Investigation Cockpit, all recorded synthetic-network cases and the eight existing pages. New Platform Overview sections clarify the conditional agent orchestration, show measured minimum/maximum execution phase times, and explain investigation and engineering learnings from M05_06C/M05_06D development. The previous detailed architecture and professional value explanation remain accessible.
+
+See `V1_6_0_RELEASE_NOTES.md` for corrected timing ranges, tests, limitations and deployment; `CV_EVIDENCE_BRIEF.md` for professionally scoped CV-ready claims. The existing app URL can remain unchanged. Historical V1.5.0 and earlier release notes refer to the project's former TREAD AI brand for traceability.
+
+---
+
+# TEAD AI V1.5.0 — Unified Investigation Cockpit
 
 **Latest packaged presentation release.** The Guided Operations Demo now displays the replay controls, current agent route and recorded input/action/output summaries in one compact desktop theatre. The platform remains an **offline, synthetic-network investigation replay**; no live network or AI model calls occur from the public app. For complete source messages, specialist inspection and the full route, expand the corresponding disclosures beneath the cockpit.
 
 The viewer can still choose Executive / Full Engineering and Healthy → Incident / Incident-only modes. All 136 frozen data files are unchanged from V1.4.3. See `V1_5_0_RELEASE_NOTES.md` for changes, QA limitations, and deployment guidance.
 
-# TREAD AI — Telecom AI Engineering Platform
+# TEAD AI — Telecom AI Engineering Platform
 
 ## V1.4.3 — Post-Restart Timeline & Acceptance Readiness (13 October 2026)
 
@@ -16,7 +30,7 @@ The viewer can still choose Executive / Full Engineering and Healthy → Inciden
 
 ## V1.4 — External visitor experience and recorded-execution integrity
 
-- **Branding:** Public interface and browser tab use TREAD AI; internal module numbers and trace IDs are retained only for provenance and source-code linkage.
+- **Branding:** Public interface and browser tab use TEAD AI; internal module numbers and trace IDs are retained only for provenance and source-code linkage.
 - **Observed orchestration:** All four cell/site incident recordings execute SP02 through SP07 **sequentially**. Parallel execution was the original engineering objective but was deferred because large payloads caused freezes. The replay graph, routing descriptions, timing notes and README reflect the recorded order, without altering underlying trace data.
 - **Two experiences:** A concise executive presentation (~84–96 seconds at 6 seconds per frame, scenario dependent) and the complete recorded engineering playback. Both use one source of original compressed evidence and allow investigation drill-down.
 - **RCA comprehension:** A compact source-backed conclusion, scope and recorded limitations appear ahead of detailed Supervisor evidence. The detailed report remains accessible.
@@ -24,7 +38,7 @@ The viewer can still choose Executive / Full Engineering and Healthy → Inciden
 - **Evaluation:** Post-run aggregate scores remain separate from operational performance. Full field-level grading rubrics or accurate token accounting must not be inferred from the packaged summary if absent.
 - **Scope:** Replay only; no live polling, model serving, new LangGraph execution, RAG retrieval, network remediation or production MTTR claim.
 
-# TREAD AI — Telecom AI Engineering Platform · Recorded Investigation Replay
+# TEAD AI — Telecom AI Engineering Platform · Recorded Investigation Replay
 
 **Release:** V1.4 Executive & Engineering Showcase (recorded offline replay) — 12 October 2026  
 **Source project:** `module_5_telecom_ai`, internal project module, M05_06D  

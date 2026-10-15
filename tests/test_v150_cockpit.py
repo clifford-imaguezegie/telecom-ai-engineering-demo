@@ -62,7 +62,7 @@ def test_compact_guided_page_has_no_full_hero_and_retains_inspectors(monkeypatch
     runpy.run_path(str(APP),run_name='__main__')
     joined='\n'.join(shown)
     assert 'tread-guided-marker' in joined
-    assert 'V1.5.0 · UNIFIED INVESTIGATION COCKPIT' in joined
+    assert 'V1.6.1 · UNIFIED INVESTIGATION COCKPIT' in joined
     assert 'cockpit-status' in joined and 'cockpit-activity' in joined
     assert '<div class="hero">' not in joined
     assert 'Awaiting Localisation Agent' in joined
