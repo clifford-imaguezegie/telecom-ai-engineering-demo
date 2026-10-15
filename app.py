@@ -366,6 +366,15 @@ h1,h2,h3{letter-spacing:-.025em}
 @media(max-width:420px){.gs-evidence-grid{grid-template-columns:1fr}.gs-evidence{min-height:82px;max-height:100px}.gs-route{padding:9px}}
 
 
+/* V1.7.1a — prevent the first Guided Demo eyebrow from being cropped by
+   Streamlit's compact first-block layout. Scoped to this page only. */
+.block-container:has(.tread-guided-marker) .cockpit-kicker{
+  display:block;
+  box-sizing:border-box;
+  padding-top:12px!important;
+  line-height:1.5!important;
+}
+
 /* V1.7.1 — explicit timing + context-specific results, no independent time simulation. */
 .block-container:has(.tread-guided-marker){padding-top:1.7rem!important}
 .cockpit-heading{padding-top:2px;line-height:1.35;margin-bottom:2px}
