@@ -21,9 +21,9 @@ The new page comprises:
 - 98.7% is a **representation-size result for a separate development experiment**; not equivalent to 98.7% fewer billed tokens, reduced latency, or cost.
 - All nine case records, compressed original evidence, route decisions, Supervisor outputs and saved evaluation records remain unchanged.
 
-## Code-only release
+## Full-app distribution (alternative to minimal installer)
 
-This hotfix includes `value_solutions.py`, `apply_v173.py` (minimal patch installer), `tests/test_v173_value_solutions.py` and this release note. **It does not replace the existing `app.py` file wholesale.** The installer safely inserts one module import, one sidebar entry and one page handler into the current app.py. It refuses to modify the application if the expected anchors do not match.
+This package contains the **complete updated `app.py`**, `value_solutions.py`, the V1.7.3 test and these release notes. It is built on the tested V1.7.2 + V1.7.1a application baseline and changes navigation for the new Value Proposition & Solutions page only. Do not overwrite an `app.py` with uncommitted personal edits; compare or back up first. This package does not contain or replace recorded data, credentials, or the portfolio README.
 
 ## Validation
 

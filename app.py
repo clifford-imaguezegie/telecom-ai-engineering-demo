@@ -14,6 +14,7 @@ from html import escape
 from presentation import agent_label, format_duration, agent_execution_rows, benchmark_summary, phase_execution_ranges
 from guided_story_ui import flow_html, evidence_html, focus_html, boundary_html, phase_for, board_html
 from network_overview import derive_inventory, observed_tools, topology_html, tools_html, NETWORK_STYLE, AGENT_ROLES, TOOL_NAMES
+from value_solutions import render_page as render_value_solutions_page
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -27,7 +28,7 @@ except ImportError:
 
 BASE = Path(__file__).resolve().parent
 DATA = BASE / 'data'
-PAGES = ['Platform Overview','Guided Operations Demo','Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
+PAGES = ['Platform Overview','Value Proposition & Solutions','Guided Operations Demo','Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
 
 st.set_page_config(page_title='TEAD AI | Telecom Investigation & RCA',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
 st.markdown('''<style>
@@ -1357,6 +1358,9 @@ if page=='Platform Overview':
  st.divider()
  render_value_proposition()
  st.caption('Future development: live adapters, operational resilience, measured inference economics, evidence sufficiency and policy-bounded actions require separate testing before production claims.')
+
+elif page=='Value Proposition & Solutions':
+ render_value_solutions_page(st, [load_case(x) for x in manifest['scenario_order']])
 
 elif page=='Guided Operations Demo':
  st.markdown('<span class="tread-guided-marker" aria-hidden="true"></span><div class="cockpit-kicker">TEAD AI · AGENTIC NETWORK INVESTIGATION</div><div class="cockpit-heading">Guided Operations Demo</div>',unsafe_allow_html=True)
