@@ -118,7 +118,7 @@ def test_guided_demo_progressively_reveals_sp01_model_and_telemetry(monkeypatch)
    return json.load(gzip.open(root/ev['file'],'rt'))
   return build_story(c,evidence)
  healthy=case('M05I0017');incident=case('M05I0005')
- seq=guided_sequence(healthy,beats(healthy),incident,beats(incident),True)
+ seq=guided_sequence(healthy,beats(healthy),incident,beats(incident),False)
  ml_idx=next(i for i,item in enumerate(seq) if item['scenario_id']=='M05I0005' and
              item['beat']['source'].endswith(' · ml_specialist_summary'))
  scope_idx=next(i for i,item in enumerate(seq) if item['scenario_id']=='M05I0005' and
@@ -128,9 +128,9 @@ def test_guided_demo_progressively_reveals_sp01_model_and_telemetry(monkeypatch)
  def page_at(index):
   stub=MockStreamlit('Guided Operations Demo','M05I0005')
   stub.full_engineering=True
-  stub.session_state['ops_player_M05I0005_True']={
+  stub.session_state['ops_player_M05I0005_False']={
    'index':index,'playing':False,'seconds':3,'last_tick':time.monotonic(),
-   'carry':0.,'presentation_elapsed':0.
+   'carry':0.,'presentation_elapsed':0.,'started':True
   }
   messages=[]
   stub.markdown=lambda value,*a,**kw:messages.append(str(value))
@@ -140,12 +140,12 @@ def test_guided_demo_progressively_reveals_sp01_model_and_telemetry(monkeypatch)
   runpy.run_path(str(APP),run_name='__main__')
   return '\n'.join(messages)
  first=page_at(0)
- assert 'Awaiting Localisation Agent' in first
+ assert 'Waiting for this recorded tool result' in first
  assert '85.2%' not in first
  at_ml=page_at(ml_idx)
  assert '85.2%' in at_ml
- assert 'Awaiting Localisation Agent' in at_ml
+ assert 'Waiting for this recorded tool result' in at_ml
  at_scope=page_at(scope_idx)
  assert '91.4%' in at_scope
  at_telemetry=page_at(network_idx)
- assert '48 KPI observations' in at_telemetry
+ assert '48 recorded subnetwork KPI observations' in at_telemetry

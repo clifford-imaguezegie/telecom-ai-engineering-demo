@@ -62,10 +62,10 @@ def test_compact_guided_page_has_no_full_hero_and_retains_inspectors(monkeypatch
     runpy.run_path(str(APP),run_name='__main__')
     joined='\n'.join(shown)
     assert 'tread-guided-marker' in joined
-    assert 'V1.6.2 · UNIFIED INVESTIGATION COCKPIT' in joined
-    assert 'cockpit-status' in joined and 'cockpit-activity' in joined
+    assert 'TEAD AI · AGENTIC NETWORK INVESTIGATION' in joined
+    assert 'gs-status' in joined and 'gs-focus' in joined and 'gs-route' in joined and 'gs-evidence-grid' in joined
     assert '<div class="hero">' not in joined
-    assert 'Awaiting Localisation Agent' in joined
+    assert 'Waiting for this recorded tool result' in joined
 
 
 def test_cockpit_no_future_tool_data_leaks(monkeypatch):
@@ -75,7 +75,7 @@ def test_cockpit_no_future_tool_data_leaks(monkeypatch):
     monkeypatch.setitem(sys.modules,'streamlit',mock)
     runpy.run_path(str(APP),run_name='__main__')
     output=' '.join(seen)
-    assert 'Awaiting Localisation Agent' in output
+    assert 'Waiting for this recorded tool result' in output
     assert '91.4%' not in output
 
 
@@ -110,7 +110,7 @@ def test_source_preserves_state_persistence_contracts():
     assert 'View complete recorded agent route' in source
     assert 'Full current-stage messages and localisation evidence' in source
     assert 'guided_agent_drilldown(case,beat[\'agent\'],beat)' in source
-    assert 'height=250,scrolling=False' in source
+    assert 'flow_html(item,timeline[:idx+1]' in source
 
 
 def test_long_message_is_compact_without_affecting_source(monkeypatch):

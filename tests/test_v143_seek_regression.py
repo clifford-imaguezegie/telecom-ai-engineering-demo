@@ -74,6 +74,7 @@ def test_guided_post_restart_slider_persists_after_fragment_refresh(monkeypatch,
     assert last>=2
     # Previously completed journey; restart must reset player AND widget state.
     mock.session_state[key]['index']=last
+    mock.session_state[key]['started']=True
     mock.session_state[seek]=last
     mock.click(key+'_restart')
     with pytest.raises(FragmentRerun):render(mock,monkeypatch)
@@ -119,6 +120,7 @@ def test_standalone_post_restart_timeline_persists(monkeypatch,scenario):
     last=mock.seek_max[seek]
     assert last>=3
     mock.session_state[key]['index']=last
+    mock.session_state[key]['started']=True
     mock.session_state[seek]=last
     mock.click('cinema_restart_'+scenario)
     with pytest.raises(FragmentRerun):render(mock,monkeypatch)
@@ -164,7 +166,8 @@ def test_rca_interpretation_notes_qualify_recorded_claims(monkeypatch, scenario,
 
 def test_both_focus_replays_keep_compact_frames():
     source=APP.read_text('utf-8')
-    assert source.count('height=250,scrolling=False') == 2
+    assert source.count('height=250,scrolling=False') == 1
+    assert 'gs-route' in source and 'guided_operations_player' in source
     assert 'st.session_state[seek_key]=player[\'index\']\n seek=st.slider' not in source
     assert 'st.session_state[seek_key]=play[\'index\']\n    changed=st.slider' not in source
 

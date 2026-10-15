@@ -148,8 +148,17 @@ def executive_sequence(timeline):
     incidents=[x for x in timeline if x['act']=='INCIDENT INVESTIGATION']
     chosen=[]
     if healthy:
-        for kind,agent in [('scan','SP01'),('decision','SP01'),('report','FINAL')]:
-            pick=choose(healthy,lambda b:b['kind']==kind and b['agent']==agent)
+        # Executive healthy-control path must reveal the four recorded SP01
+        # results before asserting that the network had no material incident.
+        for kind,arg in [('scan','SP01'),('tool','ml_specialist_summary'),
+                         ('tool','ml_scope_probabilities'),
+                         ('tool','telemetry_network_overview'),
+                         ('tool','telemetry_events'),
+                         ('decision','SP01'),('report','FINAL')]:
+            if kind=='tool':
+                pick=choose(healthy,lambda b:b['kind']=='tool' and _tool(b)==arg)
+            else:
+                pick=choose(healthy,lambda b:b['kind']==kind and b['agent']==arg)
             if pick and pick not in chosen:chosen.append(pick)
     if incidents:
         # All SP01 ML + overview/event outputs are preserved in the short story.

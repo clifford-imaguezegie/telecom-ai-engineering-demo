@@ -45,7 +45,7 @@ def test_exec_uses_original_beats_only_and_keeps_last_report(sid):
   tools=[x['beat'].get('source','') for x in cut]
   for needed in ['ml_specialist_summary','ml_scope_probabilities','telemetry_network_overview','telemetry_events']:
    assert any(z.endswith(' · '+needed) for z in tools), needed
- assert len(cut)<=16
+ assert len(cut)<=22  # Comparison now includes the four healthy evidence arrivals
 
 @pytest.mark.parametrize('page',['Guided Operations Demo','Root Cause Analysis','Engineering Evidence'])
 def test_v14_pages_render_without_exception(monkeypatch,page):

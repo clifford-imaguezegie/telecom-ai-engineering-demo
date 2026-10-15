@@ -12,6 +12,7 @@ from operational_demo import (guided_sequence, executive_sequence, get_run_durat
                               format_clock, sp01_tools_unlocked, available_agents)
 from html import escape
 from presentation import agent_label, format_duration, agent_execution_rows, benchmark_summary, phase_execution_ranges
+from guided_story_ui import flow_html, evidence_html, focus_html, boundary_html, phase_for
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -292,6 +293,78 @@ h1,h2,h3{letter-spacing:-.025em}
 .block-container:has(.tread-guided-marker) div[data-testid="stRadio"] > label{font-size:.74rem}
 @media(max-width:960px){.cockpit-status .right{gap:7px}.cockpit-status .stat{min-width:55px;padding-left:6px}}
 @media(max-width:740px){.cockpit-status .right{width:100%;justify-content:space-between}.cockpit-activity{height:auto;min-height:250px}.cockpit-evidence{min-height:73px}}
+
+/* V1.7.0 — legible progressive investigation story. Presentation only. */
+.block-container:has(.tread-guided-marker){padding-top:1.4rem!important}
+.gs-intro{font-size:.78rem;color:#436778;margin:1px 0 6px;line-height:1.45}
+.gs-help{padding:8px 12px;border:1px solid #bee0dd;background:#f1fbf9;border-radius:9px;color:#245d58;font-size:.75rem;margin:0 0 6px}
+.gs-help b{color:#174e47}
+.gs-progress{display:flex;gap:9px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:.72rem;color:#446c7d;margin:4px 0 6px}
+.gs-progress b{color:#153e57}
+.gs-status{border:1px solid #2c6473;background:#123a4b;color:white;border-radius:12px;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:1px 0 5px}
+.gs-status .gs-status-small{display:block;font-size:.63rem;letter-spacing:.08em;font-weight:780;color:#a0e4e7}
+.gs-status b{display:block;font-size:.90rem;line-height:1.3;margin:3px 0 1px}
+.gs-status .gs-status-desc{display:block;font-size:.70rem;color:#c6e4e8}
+.gs-status .gs-duration{border-left:1px solid #518895;padding-left:12px;flex-shrink:0;font-size:.68rem;color:#c4dee0}
+.gs-status .gs-duration strong{display:block;font-size:.94rem;color:#fff;font-variant-numeric:tabular-nums}
+.gs-route{background:#f3f9fc;border:1px solid #c8dfe9;border-radius:12px;padding:10px 12px;color:#15394e;margin:5px 0 8px;max-width:100%;box-sizing:border-box}
+.gs-route *{box-sizing:border-box}
+.gs-flow-heading,.gs-board-head{display:flex;justify-content:space-between;align-items:center;gap:7px;margin-bottom:8px;flex-wrap:wrap;font-size:.70rem;color:#45687e}
+.gs-flow-heading b,.gs-board-head b{color:#143e58;font-size:.75rem;letter-spacing:.06em}
+.gs-flow-grid{display:grid;grid-template-columns:minmax(124px,1.05fr) 17px minmax(250px,2.45fr) 17px minmax(121px,1.1fr) 17px minmax(119px,1fr);gap:5px;align-items:stretch}
+.gs-node{display:flex;flex-direction:column;justify-content:center;background:white;border:1px solid #b5d0dd;border-radius:9px;padding:10px;min-width:0}
+.gs-node b{font-size:.80rem;line-height:1.23;color:#193e54;overflow-wrap:anywhere}
+.gs-node small{font-size:.65rem;color:#547387;line-height:1.3;margin-top:5px}
+.gs-eyebrow{font-size:.61rem;letter-spacing:.08em;color:#417792;font-weight:780;margin-bottom:6px}
+.gs-node.active{border:2px solid #16a591;box-shadow:0 0 0 2px rgba(22,165,145,.12);background:#effaf6}
+.gs-node.done{background:#e9f7ef;border-color:#a3cdb7}
+.gs-node.gs-final.active{background:#e8fbf4}
+.gs-arrow{color:#48809a;font-size:20px;font-weight:900;display:flex;justify-content:center;align-items:center}
+.gs-branches{display:grid;grid-template-rows:auto auto auto;gap:5px;min-width:0}
+.gs-path{border:1px solid #d6e1e8;border-radius:7px;background:#fff;display:flex;align-items:center;gap:9px;padding:5px 8px;min-width:0;flex-wrap:wrap;min-height:28px}
+.gs-path b{font-size:.65rem;letter-spacing:.02em;color:#315e77;min-width:130px}
+.gs-path small{font-size:.61rem;color:#607f90;line-height:1.2}
+.gs-path.chosen{background:#eaf8f3;border:2px solid #18a58f;padding:4px 7px}
+.gs-path.chosen b{color:#126e60}
+.gs-path.muted{opacity:.36}
+.gs-path.waiting{background:#fff;opacity:.78}
+.gs-specialists{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.gs-specialist{font-size:.57rem;font-weight:850;padding:3px 5px;border-radius:5px;background:#e8eef3;color:#376276;border:1px solid #d1dfe9}
+.gs-specialist.active{background:#c2f2e7;border-color:#16a58f;color:#086d59}
+.gs-specialist.done{background:#d6e8db;border-color:#9ec1ad;color:#2f7354}
+.gs-flow-note{font-size:.65rem;color:#668092;margin-top:7px;line-height:1.28}
+.gs-evidence-wrap{margin:4px 0 8px}
+.gs-evidence-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.gs-evidence{min-width:0;min-height:101px;max-height:101px;overflow:hidden;background:#f3f7fa;border:1px dashed #bcd2db;border-radius:10px;padding:9px 11px;box-sizing:border-box}
+.gs-evidence.revealed{border:1px solid #9fcac4;background:#ebf9f4}
+.gs-evidence.new{border:2px solid #13a58e;background:#dcf8eb;padding:8px 10px;box-shadow:0 0 0 2px #c5f2e4}
+.gs-evidence-head{display:flex;justify-content:space-between;align-items:start;gap:5px;margin-bottom:4px}
+.gs-evidence-head span{font-size:.64rem;color:#316f7e;font-weight:820;letter-spacing:.04em}
+.gs-evidence-head strong{font-size:.55rem;letter-spacing:.03em;white-space:nowrap}
+.gs-await{color:#94a9b0}.gs-received{color:#388374}.gs-new{color:#07846c}
+.gs-evidence b{display:block;color:#184459;font-size:.72rem;line-height:1.2}
+.gs-evidence p{font-size:.67rem;line-height:1.29;color:#527185;margin:4px 0 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.gs-evidence.pending p{color:#879cab}
+.gs-focus{padding:11px 14px 10px;border:1px solid #c4dfe5;border-radius:12px;background:#fff;color:#1a3c52;margin:2px 0 8px}
+.gs-focus-top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.gs-scene{font-weight:850;font-size:.69rem;color:#1d7d83;letter-spacing:.08em}
+.gs-scene-agent{color:#7b96a2;font-size:.66rem}
+.gs-focus h3{font-size:1.08rem;line-height:1.26;color:#14394e;margin:5px 0 6px;font-weight:800}
+.gs-focus>p{font-size:.78rem;color:#4a6c7b;margin:6px 0;line-height:1.44}
+.gs-why{font-size:.74rem;color:#496b7f;margin:5px 0}
+.gs-why b{color:#185374}
+.gs-result{border-left:4px solid #1e9e8d;padding:7px 9px;background:#edf9f5;border-radius:0 7px 7px 0;margin:8px 0 0}
+.gs-result>b{display:block;font-size:.66rem;color:#137965;letter-spacing:.05em}
+.gs-result p{font-size:.80rem;line-height:1.38;color:#194d4a;margin:3px 0}
+.gs-focus .gs-source-note{font-size:.66rem;color:#768d98;margin:5px 0 0}
+.gs-boundary{background:#fff8e9;border:2px solid #dea345;border-radius:12px;color:#5e471f;padding:14px 17px;margin:7px 0}
+.gs-boundary>b{font-size:.67rem;color:#936016;letter-spacing:.06em}
+.gs-boundary h3{font-size:1.08rem;margin:6px 0;color:#6b4518}
+.gs-boundary p{font-size:.78rem;line-height:1.5;margin:6px 0}
+@media(max-width:1040px){.gs-flow-grid{grid-template-columns:minmax(107px,1fr) 13px minmax(185px,2fr) 13px minmax(107px,1fr) 13px minmax(108px,1fr);gap:3px}.gs-node{padding:7px}.gs-node b{font-size:.72rem}.gs-path{padding:4px}.gs-path b{min-width:105px;font-size:.62rem}.gs-path small{font-size:.56rem}}
+@media(max-width:720px){.gs-flow-grid{grid-template-columns:1fr;gap:4px}.gs-arrow{transform:rotate(90deg);font-size:15px;height:16px}.gs-branches{grid-template-columns:1fr;gap:4px}.gs-path{min-height:36px}.gs-evidence-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gs-evidence{min-height:110px;max-height:110px}.gs-status{flex-wrap:wrap}.gs-status .gs-duration{border-left:0;padding-left:0}}
+@media(max-width:420px){.gs-evidence-grid{grid-template-columns:1fr}.gs-evidence{min-height:82px;max-height:100px}.gs-route{padding:9px}}
+
 </style>''',unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False)
@@ -775,6 +848,8 @@ def _seek_from_widget(player_key, seek_key, last):
     play = st.session_state[player_key]
     index = int(st.session_state[seek_key])
     play['index'] = max(0, min(last, index))
+    if 'started' in play:  # Guided demo: seeking reveals the chosen recorded scene.
+        play['started'] = True
     play['playing'] = False
     play['last_tick'] = time.monotonic()
     if 'carry' in play:
@@ -947,12 +1022,17 @@ def guided_agent_drilldown(case, current_agent, current_beat):
 
 @st.fragment(run_every='1s')
 def guided_operations_player(selected_sid, include_healthy, executive=False):
+    """V1.7.0 staged story of independent saved traces, not a live network simulation.
+
+    Compatibility: uses the same recorded playlist, player key structure, slider
+    callback, complete-route inspector, and original evidence drill-down.
+    """
     healthy_sid='M05I0017'
     healthy=load_case(healthy_sid)
     incident=load_case(selected_sid)
     timeline=guided_sequence(healthy,load_storyboard(healthy_sid),
-        incident if selected_sid != healthy_sid else None,
-        load_storyboard(selected_sid) if selected_sid != healthy_sid else [],
+        incident if selected_sid!=healthy_sid else None,
+        load_storyboard(selected_sid) if selected_sid!=healthy_sid else [],
         include_healthy=include_healthy or selected_sid==healthy_sid)
     if executive:
         timeline=executive_sequence(timeline)
@@ -961,115 +1041,184 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
         return
     key='ops_player_'+selected_sid+'_'+str(include_healthy)+('_executive' if executive else '')
     if key not in st.session_state:
-        st.session_state[key]={'index':0,'playing':False,'seconds':6 if executive else 7,'last_tick':time.monotonic(),
-                               'carry':0.,'presentation_elapsed':0.}
+        st.session_state[key]={'index':0,'playing':False,'seconds':6 if executive else 7,
+                               'last_tick':time.monotonic(),'carry':0.,
+                               'presentation_elapsed':0.,'started':False}
     play=st.session_state[key]
     last=len(timeline)-1
     seek_key=key+'_seek'
-    if seek_key not in st.session_state:st.session_state[seek_key]=play['index']
+    if seek_key not in st.session_state:
+        st.session_state[seek_key]=play['index']
     now=time.monotonic()
-    before_tick=play['index']
+    previous_index=play['index']
+    boundary_index=next((i for i in range(len(timeline)-1)
+        if timeline[i]['scenario_id']!=timeline[i+1]['scenario_id']),None)
+    # Explicit comparison boundary: never advance into the second trace automatically.
+    if play['playing'] and boundary_index is not None and play['index']==boundary_index:
+        play['playing']=False
+        play['carry']=0.
     if play['playing']:
+        play['started']=True
         dt=max(0.,min(now-play['last_tick'],3.))
         play['carry']+=dt
         play['presentation_elapsed']+=dt
-        while play['index'] < last:
+        while play['index']<last:
             current_kind=timeline[play['index']]['beat']['kind']
-            hold=play['seconds'] * (1.0 if executive else (1.5 if current_kind in {'decision','rag','feedback','handover','report'} else 1.0))
-            if play['carry'] < hold:break
+            hold=play['seconds'] * (1.0 if executive else
+                (1.5 if current_kind in {'decision','rag','feedback','handover','report'} else 1.0))
+            if play['carry']<hold:
+                break
+            # Never automatically blur the boundary between separate recordings.
+            if boundary_index is not None and play['index']==boundary_index:
+                play['playing']=False
+                play['carry']=0.
+                break
             play['carry']-=hold
             play['index']+=1
         if play['index']>=last:
             play['playing']=False
             play['carry']=0.
-    if play['index']!=before_tick:
+    if play['index']!=previous_index:
         _set_playhead(play,seek_key,play['index'],last)
     play['last_tick']=now
 
+    # Controls are above the evidence; one identifiable result changes per scene.
     controls=st.columns([1.1,.85,.85,.9,1.45])
     with controls[0]:
-        if st.button('⏸ Pause' if play['playing'] else '▶ Play',type='primary',use_container_width=True,key=key+'_play'):
-            if not play['playing'] and play['index']==last:
-                _set_playhead(play,seek_key,0,last);play['presentation_elapsed']=0.
-            play['playing']=not play['playing'];play['carry']=0.;play['last_tick']=time.monotonic()
+        if st.button('⏸ Pause' if play['playing'] else '▶ Play',type='primary',
+                     use_container_width=True,key=key+'_play'):
+            if boundary_index is not None and play['index']==boundary_index and play.get('started'):
+                play['playing']=False
+            else:
+                if not play['playing'] and play['index']==last:
+                    _set_playhead(play,seek_key,0,last)
+                    play['presentation_elapsed']=0.
+                play['started']=True
+                play['playing']=not play['playing']
+            play['carry']=0.
+            play['last_tick']=time.monotonic()
             st.rerun(scope='fragment')
     with controls[1]:
-        if st.button('◀ Back',disabled=play['index']==0,use_container_width=True,key=key+'_back'):
-            play['playing']=False;_set_playhead(play,seek_key,play['index']-1,last);play['carry']=0.;st.rerun(scope='fragment')
+        if st.button('◀ Back',disabled=not play.get('started') or play['index']==0,
+                     use_container_width=True,key=key+'_back'):
+            play['playing']=False
+            _set_playhead(play,seek_key,play['index']-1,last)
+            play['carry']=0.
+            st.rerun(scope='fragment')
     with controls[2]:
-        if st.button('Next ▶',disabled=play['index']==last,use_container_width=True,key=key+'_next'):
-            play['playing']=False;_set_playhead(play,seek_key,play['index']+1,last);play['carry']=0.;st.rerun(scope='fragment')
+        if st.button('Next ▶',disabled=play.get('started') and play['index']==last,
+                     use_container_width=True,key=key+'_next'):
+            play['playing']=False
+            if not play.get('started'):
+                play['started']=True
+            elif boundary_index is None or play['index']!=boundary_index:
+                _set_playhead(play,seek_key,play['index']+1,last)
+            play['carry']=0.
+            st.rerun(scope='fragment')
     with controls[3]:
         if st.button('↺ Restart',use_container_width=True,key=key+'_restart'):
-            play.update({'playing':False,'carry':0.,'presentation_elapsed':0.,'last_tick':time.monotonic()})
+            play.update({'playing':False,'carry':0.,'presentation_elapsed':0.,
+                         'started':False,'last_tick':time.monotonic()})
             _set_playhead(play,seek_key,0,last)
             st.rerun(scope='fragment')
     with controls[4]:
         speeds=[4,5,6,7,8] if executive else [3,5,7,10,14]
         speed=st.selectbox('Playback pacing',speeds,
                            index=speeds.index(play['seconds']) if play['seconds'] in speeds else 2,
-                           format_func=lambda x:f'{x}s per presentation beat',
+                           format_func=lambda x:f'{x}s per recorded scene',
                            label_visibility='collapsed',key=key+'_pace')
-        if speed!=play['seconds']:play['seconds']=speed;play['carry']=0.
-    st.slider('Playback position',min_value=0,max_value=last,key=seek_key,
-              label_visibility='collapsed',on_change=_seek_from_widget,args=(key,seek_key,last))
-    idx=play['index'];item=timeline[idx];sid=item['scenario_id'];beat=item['beat'];case=healthy if sid==healthy_sid else incident
-    durations=get_run_durations(case)
-    scoped=timeline[:idx+1]
-    at_end=beat['agent']=='FINAL'
-    material=case['derived_display']['incident_present']
-    assessed=any(x['scenario_id']==sid and x['beat']['kind']=='decision' and x['beat']['agent']=='SP01' for x in scoped)
-    if not assessed:status='ASSESSMENT UNDERWAY'
-    elif not material:status='NO MATERIAL INCIDENT'
-    elif at_end:status='RCA AVAILABLE'
-    else:status='DEGRADATION IDENTIFIED'
-    alert=material and assessed
-    title='Network Health Assessment' if not material else 'Incident Investigation & Root Cause Analysis'
-    exact=event_trace_offset(case,beat)
-    st.markdown(cockpit_status_html(item,case,status,alert,durations,play['presentation_elapsed'],exact),unsafe_allow_html=True)
-    st.markdown(f'<div class="cockpit-timeline"><strong>Stage {idx+1} / {len(timeline)} · {"PLAYING" if play["playing"] else "PAUSED"}</strong>'
-                f'<span>Current: {escape(agent_label(beat["agent"]))} · recorded orchestration, not live execution</span></div>',unsafe_allow_html=True)
-    # Same-screen theatre: the complete focus workflow and synchronised evidence
-    # always occupy one row. Long source text and drill-down remain below.
-    graph,live=st.columns([1.2,1],gap='small')
+        if speed!=play['seconds']:
+            play['seconds']=speed
+            play['carry']=0.
+
+    # Preserved seek callback and stage inspector; collapsed to remove visual competition.
+    with st.expander('Jump to a recorded scene',expanded=False):
+        st.slider('Playback position',min_value=0,max_value=last,key=seek_key,
+                  on_change=_seek_from_widget,args=(key,seek_key,last))
+        st.caption('Presentation scene numbers are not original LangSmith execution times.')
+    idx=play['index']
+    base=timeline[idx]
+    sid=base['scenario_id']
+    beat=base['beat']
+    case=healthy if sid==healthy_sid else incident
+    item=dict(base,case=case)
+    ready=not play.get('started')
+    phase,title,why=phase_for(item)
+    if ready:
+        name='Ready to start'
+    elif beat['agent']=='FINAL':
+        name='Recorded investigation complete'
+    else:
+        name=title
+    original=get_run_durations(case)
+    st.markdown(
+        '<div class="gs-status"><div><span class="gs-status-small">'
+        +escape('RECORDING A · HEALTHY CONTROL' if sid==healthy_sid else
+                'RECORDING B · SEPARATE INCIDENT' if include_healthy and selected_sid!=healthy_sid else
+                'RECORDED INCIDENT')
+        +'</span><b>'+escape(case['title'])+'</b><span class="gs-status-desc">'
+        +escape(name+' · '+case['scenario_id'])+'</span></div>'
+        +'<div class="gs-duration"><strong>'+escape(format_clock(original['total']))
+        +'</strong>Original recorded duration</div></div>',unsafe_allow_html=True)
+    st.markdown('<div class="gs-progress"><b>'+escape('Scene 0 · Ready' if ready else
+        f'Chapter {phase}/{3 if not case["derived_display"]["incident_present"] else 6} · Scene {idx+1}/{len(timeline)}')+'</b><span>'
+        +('PAUSED · Press Play to begin' if ready else
+          'PLAYING · Next evidence will appear in sequence' if play['playing'] else
+          'PAUSED · Use Next to follow changes')+'</span></div>',unsafe_allow_html=True)
+    st.markdown(flow_html(item,timeline[:idx+1] if not ready else [],ready=ready),unsafe_allow_html=True)
+    st.markdown(evidence_html(timeline,idx,ready=ready),unsafe_allow_html=True)
+    st.markdown(focus_html(item,idx+1,len(timeline),ready=ready),unsafe_allow_html=True)
+
+    at_boundary=boundary_index is not None and idx==boundary_index and play.get('started')
+    if at_boundary:
+        st.markdown(boundary_html(healthy_sid,selected_sid),unsafe_allow_html=True)
+        if st.button('Continue → Open the separate incident recording',type='primary',key=key+'_continue'):
+            play['playing']=False
+            play['carry']=0.
+            play['presentation_elapsed']=0.
+            _set_playhead(play,seek_key,boundary_index+1,last)
+            st.rerun(scope='fragment')
+    elif ready:
+        st.markdown('<div class="gs-help"><b>Start here:</b> Press Play or Next. '
+                    'Watch the route and evidence tiles highlight as each saved result arrives. '
+                    'No live agents or network calls are started.</div>',unsafe_allow_html=True)
+
+    st.caption('This is a narrated replay of saved synthetic-network experiments. '
+               'The original run duration above is not the presentation playback timer. '
+               'ML confidence values are uncalibrated supporting evidence, not network truth.')
+    # Complete older technical views remain accessible instead of competing for attention.
     case_beats=load_storyboard(sid)
     active_index=next(i for i,b in enumerate(case_beats) if b['sequence']==beat['sequence'])
-    with graph:
-        embed_workflow_html(workflow_svg(case['route_family'],case_beats,active_index),height=250,scrolling=False)
-    with live:
-        st.markdown(cockpit_activity_html(beat,idx+1,len(timeline)),unsafe_allow_html=True)
-    st.caption('Full recorded route, complete stage messages, telemetry and engineer drill-down are below the cockpit. Pause or seek to inspect any recorded step.')
     with st.expander('View complete recorded agent route',expanded=False):
         st.html(workflow_overview_html(case_beats,active_index))
     with st.expander('Full current-stage messages and localisation evidence (click to inspect)',expanded=False):
-        st.caption('Original trace provenance: '+beat['source'] + (' · '+beat['evidence_id'] if beat.get('evidence_id') else ''))
+        st.caption('Original trace provenance: '+beat['source']+
+                   (' · '+beat['evidence_id'] if beat.get('evidence_id') else ''))
         st.markdown('**Incoming context / handover**')
         st.write(beat['input'] or 'No separate input recorded.')
         st.markdown('**Agent action / tool request**')
         st.write(beat['action'] or 'No action detail recorded.')
         st.markdown('**Recorded output / feedback**')
         st.write(beat['output'] or 'No output detail recorded.')
-        if beat['agent']=='SP01' or assessed:
+        if beat['agent']=='SP01' or any(x['scenario_id']==sid and
+              x['beat']['agent']=='SP01' and x['beat']['kind']=='decision'
+              for x in timeline[:idx+1]):
             st.markdown('**Network Health & Localisation Agent · Two ML predictions + two telemetry services**')
-            unlocked=sp01_tools_unlocked(timeline,idx)
+            unlocked=sp01_tools_unlocked(timeline,idx) if not ready else set()
             guided_sp01_cards(sid,unlocked)
             if 'telemetry_network_overview' in unlocked:
                 with st.expander('📈 Inspect the recorded 15-minute accessibility trend (network telemetry)'):
                     network_chart(case)
-    if include_healthy and selected_sid!=healthy_sid and sid==healthy_sid:
-        st.info('First independent recording: healthy network. After its report, the presentation switches to a **different recorded incident**, not a new alert detected in the same continuous live network.')
     if case['route_family']=='LOCAL_SPECIALISTS':
-        st.caption('Recorded execution: the six cell/site specialists ran sequentially. The graph and evidence progression reflect that experimental execution order.')
+        st.caption('The actual cell/site investigation ran SP02–SP07 sequentially. '
+                   'Executive view selects representative recorded specialist findings; '
+                   'Full Engineering replay preserves the complete director-cut sequence.')
     guided_agent_drilldown(case,beat['agent'],beat)
-    if beat['agent']=='FINAL':
-        if not material:st.success('Recorded health check complete: no material degradation identified; no specialist escalation was needed.')
-        else:
-            st.success('Recorded investigation complete. Diagnosis: '+str(case['derived_display'].get('diagnosis') or 'See Supervisor final output.'))
+    if beat['agent']=='FINAL' and not ready:
         if st.button('View complete Root Cause Analysis →',key=key+'_rca'):
             st.session_state['selected_scenario']=sid
             st.session_state['requested_page']='Root Cause Analysis'
             st.rerun()
-    st.caption('Two clocks: presentation timer = playback viewing time; SP01/end-to-end/event offset = measured original LangSmith times. No new ML inference, telemetry polling, agent execution or RAG search occurs. Each case is a separate synthetic-network snapshot.')
 
 
 # Scenario selection is persistent business state, not ephemeral widget state.
@@ -1136,21 +1285,26 @@ if page=='Platform Overview':
  st.caption('Future development: live adapters, operational resilience, measured inference economics, evidence sufficiency and policy-bounded actions require separate testing before production claims.')
 
 elif page=='Guided Operations Demo':
- st.markdown('<span class="tread-guided-marker" aria-hidden="true"></span><div class="cockpit-kicker">TEAD AI V1.6.2 · UNIFIED INVESTIGATION COCKPIT</div><div class="cockpit-heading">Guided Operations Demo</div>',unsafe_allow_html=True)
+ st.markdown('<span class="tread-guided-marker" aria-hidden="true"></span><div class="cockpit-kicker">TEAD AI · AGENTIC NETWORK INVESTIGATION</div><div class="cockpit-heading">Guided Operations Demo</div>',unsafe_allow_html=True)
  main_sid=sid if sid!='M05I0017' else 'M05I0003'
+ st.markdown('<div class="gs-intro">Follow one recorded 5G investigation from SP01 network assessment through evidence arrival, conditional routing, specialist analysis and Supervisor RCA. <b>Nothing updates until you press Play or Next.</b></div>',unsafe_allow_html=True)
  mode_col,scene_col=st.columns([1,1],gap='small')
  with mode_col:
-  experience=st.radio('Visitor experience',['Executive overview (~90 seconds)','Full engineering replay'],horizontal=True)
+  experience=st.radio('Visitor experience',['Executive overview (key scenes)','Full engineering replay'],horizontal=True)
  with scene_col:
-  modes=['Healthy check → Separate incident','Incident investigation only'] if sid!='M05I0017' else ['Healthy check only']
+  if sid=='M05I0017':
+   modes=['Healthy control only']
+  else:
+   modes=['Incident walkthrough (recommended)','Healthy control only','Compare healthy + separate incident']
   mode=st.radio('Presentation',modes,horizontal=True)
- if sid=='M05I0017':
-  st.caption('Healthy-control recording selected · No material incident. Choose another scenario for a healthy-to-incident demonstration.')
- elif mode==modes[0]:
-  st.caption('**Independent saved recordings:** M05I0017 (healthy), then '+main_sid+' ('+c['title']+'). The transition is editorial, not a fault arising in one live network. PM source periodicity: 15 minutes.')
+ if mode.startswith('Compare'):
+  st.caption('**Two independent experimental recordings.** The healthy control is shown first; playback stops at an explicit boundary before the selected incident. These are not successive states of one live network.')
+ elif mode=='Healthy control only':
+  st.caption('**Healthy-network control · M05I0017.** This is a standalone saved execution with no material incident and no specialist escalation.')
  else:
-  st.caption('Single saved synthetic-network incident · No live AI inference, telemetry retrieval, or investigation execution.')
- guided_operations_player(main_sid if sid!='M05I0017' else sid,mode==modes[0],executive=experience.startswith('Executive'))
+  st.caption('**Selected synthetic incident: '+main_sid+'.** Follow only this recorded case. The four evidence tiles begin empty and reveal results in source order.')
+ player_sid='M05I0017' if mode=='Healthy control only' else main_sid
+ guided_operations_player(player_sid,mode=='Healthy control only' or mode.startswith('Compare'),executive=experience.startswith('Executive'))
  with st.expander('About this demonstration and next steps',expanded=False):
   render_value_proposition()
   st.markdown('Open **Agentic Replay** for every recorded call, **Engineering Evidence** for KPI series, **Root Cause Analysis** for diagnosis or **Evaluation & Performance** for trace measurements.')
