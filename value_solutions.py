@@ -72,12 +72,19 @@ def page_html(cases):
     if not sp or not incidents:
         raise ValueError('Trace-backed SP01 and incident phase measurements are required')
     n_incident = incidents['count']
-    n_healthy = len(cases)-n_incident
+    n_healthy = len(cases) - n_incident
+    # Headline thresholds are only displayed when supported by recorded data.
+    assessment_value = '< 25 sec' if sp['max'] < 25 else f'{sp["max"]:.1f} sec observed'
+    rca_value = '< 5 min' if incidents['max'] < 300 else f'{_duration(incidents["max"])} observed'
     cards = (
-        (f'{sp["min"]:.1f}–{sp["max"]:.1f}s', 'Network health assessment', f'{sp["count"]}/{len(cases)} trace-backed SP01 stages'),
-        (f'{_duration(incidents["min"])}–{_duration(incidents["max"])}', 'Investigation + draft RCA', f'{n_incident}/{n_incident} recorded incidents'),
-        (str(len(cases)), 'Experimental recordings', f'{n_incident} incidents + {n_healthy} healthy control'),
-        ('98.7%', 'CU evidence payload reduction', 'Separate representation-size experiment; not a token or cost metric'),
+        (assessment_value, 'Network health assessment',
+         f'SP01 assessment & initial localisation · {sp["count"]}/{len(cases)} recordings'),
+        (rca_value, 'Evidence-grounded RCA',
+         f'Full investigation and draft RCA · {n_incident}/{n_incident} incidents'),
+        ('98.7%', 'CU evidence payload reduction',
+         '17.29 MB → about 227 KB · representation size, not token cost'),
+        ('Cross-domain', 'Unified engineering intelligence',
+         'Specialist findings synthesized into a traceable RCA'),
     )
     metrics = ''.join('<div class="vs-metric"><strong>'+escape(val)+'</strong><div class="vs-unit">'+escape(name)+'</div><small>'+escape(note)+'</small></div>' for val,name,note in cards)
     benefits = ''.join('<div class="vs-benefit"><b>'+escape(title)+'</b><p>'+escape(desc)+'</p></div>' for title,desc in BENEFITS)
@@ -93,7 +100,7 @@ def page_html(cases):
 <p>TEAD AI combines ML-assisted localisation, conditional specialist-agent investigations and Supervisor evidence synthesis to demonstrate a faster, more structured way to investigate complex 5G network incidents. The same capabilities may enable wider network-assurance and engineering decision-support services, subject to operator-grade validation.</p></div>
 <div class="vs-section"><h3>Demonstrated engineering outcomes</h3><p>Measured in completed synthetic-network experiments; these are not operator SLAs or measured reductions in production MTTR.</p></div>
 <div class="vs-metrics">'''+metrics+'''</div>
-<div class="vs-foot">The experimental evidence-size reduction is from development work on CU specialist evidence representation, separate from the nine final investigation timings. Formal RCA approval and operational financial benefits were not measured.</div>
+<div class="vs-foot">The duration headlines summarise source-recorded maxima (SP01 24.3 seconds; incident RCA 4m 33s). The CU payload reduction is from a separate engineering experiment, not a measured reduction in tokens or billed cost. Nine independent recordings (eight incidents and one healthy control) underpin the investigation demonstration; production MTTR or financial benefits have not been measured.</div>
 <div class="vs-section"><h3>Potential operational benefits</h3><p>Benefits that operator pilots could evaluate — not savings already demonstrated in a production network.</p></div>
 <div class="vs-benefits">'''+benefits+'''</div>
 <div class="vs-section"><h3>Solutions enabled by the TEAD AI architecture</h3><p>Six credible applications of the reusable architecture, with maturity stated explicitly. The first three exist as experimental capabilities; the remainder require additional engineering and validation.</p></div>

@@ -39,8 +39,9 @@ def test_new_page_renders_with_all_actual_source_scenarios(monkeypatch):
     assert 'Potential operational benefits' in txt
     assert 'Solutions enabled by the TEAD AI architecture' in txt
     assert 'Path from demonstration to operator adoption' in txt
-    assert '15.0–24.3s' in txt
-    assert '2m 48s–4m 33s' in txt
+    assert '&lt; 25 sec' in txt
+    assert '&lt; 5 min' in txt
+    assert 'Cross-domain' in txt
     assert '98.7%' in txt
 
 
@@ -67,8 +68,8 @@ def test_value_proposition_prominent_without_expanders():
 def test_recorded_stage_results_are_not_equated_with_cost_or_mttr_savings():
     txt=page_html(cases())
     assert 'synthetic-network experiments' in txt
-    assert 'not a token or cost metric' in txt
-    assert 'Formal RCA approval and operational financial benefits were not measured' in txt
+    assert 'representation size, not token cost' in txt
+    assert 'production MTTR or financial benefits have not been measured' in txt
     assert 'It does not run live agents' not in txt  # wording states the limitation with a different subject
     assert 'it does not run live agents' in txt
 
