@@ -13,6 +13,7 @@ from operational_demo import (guided_sequence, executive_sequence, get_run_durat
 from html import escape
 from presentation import agent_label, format_duration, agent_execution_rows, benchmark_summary, phase_execution_ranges
 from guided_story_ui import flow_html, evidence_html, focus_html, boundary_html, phase_for, board_html
+from network_overview import derive_inventory, observed_tools, topology_html, tools_html, NETWORK_STYLE, AGENT_ROLES, TOOL_NAMES
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -1376,6 +1377,7 @@ elif page=='Guided Operations Demo':
   st.caption('**Healthy-network control · M05I0017.** This is a standalone saved execution with no material incident and no specialist escalation.')
  else:
   st.caption('**Selected synthetic incident: '+main_sid+'.** Follow only this recorded case. The four evidence tiles begin empty and reveal results in source order.')
+ st.info('Explore a different recorded investigation with **Select scenario ▾** in the left sidebar. The replay will use that scenario’s original saved evidence and RCA; no live investigation is started.')
  player_sid='M05I0017' if mode=='Healthy control only' else main_sid
  guided_operations_player(player_sid,mode=='Healthy control only' or mode.startswith('Compare'),executive=experience.startswith('Executive'))
  with st.expander('About this demonstration and next steps',expanded=False):
@@ -1383,41 +1385,40 @@ elif page=='Guided Operations Demo':
   st.markdown('Open **Agentic Replay** for every recorded call, **Engineering Evidence** for KPI series, **Root Cause Analysis** for diagnosis or **Evaluation & Performance** for trace measurements.')
 
 elif page=='Network Overview':
- heading('Network Overview','Nine independent synthetic-network snapshots, each with its own recorded observation window. Not a single continuous live network timeline.')
- cases=manifest['cases']
- a,b,d,e=st.columns(4)
- a.metric('Recorded scenarios',len(cases)); b.metric('Incident cases',sum(bool(x['incident_present']) for x in cases));d.metric('Healthy controls',sum(not x['incident_present'] for x in cases));e.metric('Distinct evidence artifacts',sum(x['evidence_artifacts'] for x in cases))
+ heading('Synthetic 5G Network Overview','The network model, its evidence sources and the agent/tool capabilities used in our recorded experiments. Detailed individual incident findings are in Scenario Library.')
+ # All nine selected recordings carry identical topology inventories. Read the
+ # first source directly, rather than inventing site, DU, CU or NR-cell IDs.
+ reference_id=manifest['scenario_order'][0]
+ reference_case=load_case(reference_id)
+ topology_ref=evidence_by_tool(reference_case,'telemetry_topology')
+ reference_entities=(load_evidence(reference_id,topology_ref['evidence_id'])['result'].get('entities') or []) if topology_ref else []
+ inventory=derive_inventory(reference_entities)
+ st.markdown(NETWORK_STYLE,unsafe_allow_html=True)
+ st.subheader('Recorded Network Topology')
+ st.caption('Ten modeled gNodeB sites, three logical NR cells per site, and shared CU-domain context. Object identities and logical relationships below come from the recorded topology service.')
+ st.markdown(topology_html(inventory),unsafe_allow_html=True)
+ st.caption('The nine scenarios represent independent synthetic network snapshots sharing this topology inventory. PM refers to performance-management telemetry; the reporting interval is documented in Engineering Evidence and source metadata.')
  st.divider()
- l,r=st.columns([1.4,1])
- with l:
-  heading('Selected scenario / accessibility trend',f"{c['scenario_id']} · {c['title']}")
-  metric=st.radio('KPI', ['partial_drb_accessibility_pct','total_drb_accessibility_pct'],format_func=lambda v:v.replace('_',' ').title(),horizontal=True)
-  network_chart(c,metric)
- with r:
-  heading('Recorded network topology')
-  top=evidence_by_tool(c,'telemetry_topology')
-  ent=load_evidence(sid,top['evidence_id'])['result'].get('entities',[]) if top else []
-  sites={a['site_id'] for a in ent if a.get('site_id')};cu={a['cu_domain_id'] for a in ent if a.get('cu_domain_id')};cells=[a for a in ent if a.get('entity_type')=='NR_CELL_CU']
-  m1,m2,m3=st.columns(3)
-  m1.metric('Sites',len(sites));m2.metric('CU domains',len(cu));m3.metric('NR CU cells',len(cells))
-  st.markdown('**5G RAN accessibility investigation**')
-  st.write('The Network Health & Localisation Agent invokes ML predictions and network telemetry, assesses the evidence, and routes material incidents to the appropriate specialist branch and RCA Supervisor.')
-  st.markdown(f'<div class="route-box">{route_text(c)}</div>',unsafe_allow_html=True)
+ heading('Investigation evidence sources','Recorded PM and event telemetry, topology, radio, processing, transport and configuration observations are combined with supporting ML outputs and curated domain knowledge.')
+ feeds=[
+  ('Network & PM evidence','Accessibility KPIs · Network state · Cell and peer measurements'),
+  ('Radio & resources','Radio state · Resource utilisation · Processing telemetry'),
+  ('Transport & configuration','Transport interfaces · Configuration state · CU-domain/boundary state'),
+  ('ML & domain knowledge','Fault family · Affected scope · Feature drivers · Curated telecom knowledge retrieval'),
+ ]
+ feed_html='<div class="ops-architecture">'+''.join(f'<div class="step"><strong>{escape(title)}</strong><span>{escape(desc)}</span></div>' for title,desc in feeds)+'</div>'
+ st.markdown(feed_html,unsafe_allow_html=True)
  st.divider()
- heading('Investigation portfolio')
- kb_map={x['scenario_id']:load_case(x['scenario_id'])['stage_data']['supervisor_output'].get('knowledge_base_contribution') or {} for x in cases}
- overview=pd.DataFrame([{'Case':x['scenario_id'],'Scenario':x['title'],'Incident':'Yes' if x['incident_present'] else 'No','Scope':x['scope_class'],'Fault family':x['fault_family'] or 'None','RAG contribution':pretty(kb_map[x['scenario_id']].get('contribution_type'),none='Not used'),'Recorded duration':format_duration(x['trace_duration_seconds'])} for x in cases])
- st.dataframe(overview,hide_index=True,use_container_width=True)
- st.caption(f"Recorded knowledge-base retrieval was used in {sum(bool(k.get('used')) for k in kb_map.values())} of {len(cases)} scenarios. This counts original reported usage, not a measured gain in root-cause accuracy.")
- st.divider()
- heading('Curated Telecom Knowledge Base | Investigation grounding')
- selected_kb=c['stage_data']['supervisor_output'].get('knowledge_base_contribution') or {}
- if selected_kb.get('used'):
-  st.write('This selected case used recorded knowledge-base retrieval to assess a fault mechanism and distinguish plausible causes. The question and resulting reasoning are visible in **Root Cause Analysis** and the **Supervisor final finding** replay stage.')
-  for q in selected_kb.get('queries') or []:st.info(q)
-  st.caption(f"Recorded contribution: {pretty(selected_kb.get('contribution_type'))} · evidence weight: {pretty(selected_kb.get('evidence_weight'))}. This is an already completed RAG investigation, not a live query.")
- else:
-  st.info('The selected healthy-control scenario was investigated without knowledge-base retrieval. No unnecessary RAG call is represented.')
+ heading('Agent and Tool Capability Map','Each agent is shown with evidence tools actually observed across the nine recorded experiments. This is a logical architecture overview, not live execution or a disclosure of private prompts.')
+ recorded_cases=[load_case(x) for x in manifest['scenario_order']]
+ toolmap=observed_tools(recorded_cases)
+ st.markdown(tools_html(toolmap),unsafe_allow_html=True)
+ st.caption('SP01 selects the investigation route. Cell/site incidents use SP02–SP07 sequentially, CU-domain cases use SP08 instead, and healthy cases go directly to Supervisor review. Not every agent or tool is invoked in every scenario.')
+ with st.expander('Exact recorded agent → tool identifiers and provenance',expanded=False):
+  rows=[{'Agent':a,'Role':AGENT_ROLES[a][0], 'Observed tool ID':t,'Visitor label':TOOL_NAMES.get(t,t)} for a, names in toolmap.items() for t in names]
+  st.dataframe(pd.DataFrame(rows),hide_index=True,use_container_width=True)
+  st.caption('Observed tool IDs originate from the nine frozen evidence indexes. Raw curated knowledge passages, model prompts and credentials are not distributed. For exact tool inputs/outputs, use Agentic Replay and Engineering Evidence.')
+ st.info('To examine a specific synthetic incident, open **Scenario Library**. Use **Guided Operations Demo** for a narrated investigation, or **Agentic Replay** to inspect the original agent sequence and recorded tools.')
 
 elif page=='Scenario Library':
  heading('Scenario Library','Choose one of the nine completed LangSmith investigations. All incident classifications below come from recorded Supervisor outputs.')
@@ -1447,9 +1448,29 @@ elif page=='Scenario Library':
   with st.expander('Original public investigation task'):
    st.write(c['scenario_window'].get('task','—'))
   st.info('This replay shows the outcome of an already completed investigation. Selecting another scenario does not execute a new investigation.')
+ st.divider()
+ heading('Selected Scenario — Recorded PM Evidence','Case-specific accessibility trends and original performance observations are reviewed here, rather than in the network-wide topology overview.')
+ metric=st.radio('Recorded accessibility KPI', ['partial_drb_accessibility_pct','total_drb_accessibility_pct'],format_func=lambda v:v.replace('_',' ').title(),horizontal=True)
+ network_chart(c,metric)
+ st.divider()
+ heading('Investigation Portfolio','Nine independent saved experimental scenarios; the results below are drawn from selected recorded outputs.')
+ cases=manifest['cases']
+ kb_map={x['scenario_id']:load_case(x['scenario_id'])['stage_data']['supervisor_output'].get('knowledge_base_contribution') or {} for x in cases}
+ overview=pd.DataFrame([{'Case':x['scenario_id'],'Scenario':x['title'],'Incident':'Yes' if x['incident_present'] else 'No','Scope':x['scope_class'],'Fault family':x['fault_family'] or 'None','RAG contribution':pretty(kb_map[x['scenario_id']].get('contribution_type'),none='Not used'),'Recorded duration':format_duration(x['trace_duration_seconds'])} for x in cases])
+ st.dataframe(overview,hide_index=True,use_container_width=True)
+ st.caption(f"Recorded knowledge-base retrieval was used in {sum(bool(k.get('used')) for k in kb_map.values())} of {len(cases)} scenarios. This measures reported use, not improvements in RCA accuracy.")
+ with st.expander('Selected case — Curated Telecom Knowledge Base contribution',expanded=False):
+  selected_kb=c['stage_data']['supervisor_output'].get('knowledge_base_contribution') or {}
+  if selected_kb.get('used'):
+   st.write('The selected case used recorded knowledge retrieval to assess possible mechanisms. The original reasoning is available in Root Cause Analysis and the Supervisor stage of Agentic Replay.')
+   for q in selected_kb.get('queries') or []:st.info(q)
+   st.caption(f"Recorded contribution: {pretty(selected_kb.get('contribution_type'))} · evidence weight: {pretty(selected_kb.get('evidence_weight'))}. These are completed recorded lookups, not live RAG calls.")
+  else:
+   st.info('The selected scenario was investigated without a recorded knowledge-base lookup; none is fabricated.')
 
 elif page=='Agentic Replay':
- heading('Agentic Investigation Replay','Interactive animated workflow with recorded network scan, specialist dispatch, tool calls, evidence feedback and Supervisor final assessment.')
+ heading('Agentic Investigation Replay','Technical drill-down of a completed investigation: original agent stages, routing, tool evidence and Supervisor RCA. For the narrated version, use Guided Operations Demo.')
+ st.caption('Selected recorded case: **'+sid+' — '+c['title']+'**. Change the case with **Select scenario ▾** in the left sidebar; this does not trigger live inference.')
  mode=st.radio('Replay mode',['▶ Animated workflow','Recorded-stage inspector'],horizontal=True,key='replay_mode')
  if mode=='▶ Animated workflow':
   st.caption('Play or scrub through the original recorded investigation. A highlighted agent indicates the point being *presented*, not an active live process.')
