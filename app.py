@@ -80,6 +80,85 @@ h1,h2,h3{letter-spacing:-.025em}
 .ops-value strong{font-size:1.1rem}
 .ops-value p{font-size:.84rem;color:#41645f;line-height:1.55}
 @media(max-width:760px){.ops-architecture{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.ops-milestone .number{font-size:1.2rem}}
+
+/* V1.6.2 — single-frame primary architecture view; V1.6.1 full diagram retained in disclosure. */
+.tead-oneframe{box-sizing:border-box;border:1px solid #cbdfe9;background:linear-gradient(135deg,#f5fafe,#f8fbfd);border-radius:16px;padding:15px 16px 10px;color:#163e54;max-width:100%}
+.tead-oneframe *{box-sizing:border-box}
+.tead-oneframe .of-top{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:10px;flex-wrap:wrap}
+.tead-oneframe .of-top strong{font-size:.97rem;color:#113b56}
+.tead-oneframe .of-tag{font-size:.65rem;font-weight:750;letter-spacing:.07em;color:#4b7791;text-transform:uppercase}
+.tead-oneframe .of-columns{display:grid;grid-template-columns:minmax(195px,.94fr) minmax(360px,1.83fr) minmax(208px,.98fr);gap:9px;align-items:stretch}
+.tead-oneframe .of-left{display:flex;flex-direction:column;gap:8px;min-width:0}
+.tead-oneframe .of-card{border:1px solid #cee0eb;border-radius:12px;background:#fff;padding:11px 11px 10px;min-width:0;box-shadow:0 2px 9px rgba(16,63,91,.04)}
+.tead-oneframe .of-assess{background:#ecf6fc;border-color:#aad3e8;flex:1}
+.tead-oneframe .of-route{background:#f1effb;border-color:#d1c6f0}
+.tead-oneframe .of-stage{display:flex;align-items:start;gap:8px;margin:0 0 6px}
+.tead-oneframe .of-n{height:25px;width:25px;flex:none;display:flex;align-items:center;justify-content:center;background:#244b70;border-radius:50%;color:#fff;font-size:.85rem;font-weight:850}
+.tead-oneframe .of-route .of-n{background:#7360b5}
+.tead-oneframe .of-supervisor .of-n{background:#188469}
+.tead-oneframe .of-rca .of-n{background:#e2faf2;color:#0a625c}
+.tead-oneframe .of-title{font-size:.85rem;font-weight:850;line-height:1.21;overflow-wrap:break-word;color:#173e58}
+.tead-oneframe .of-sub{font-size:.67rem;line-height:1.35;color:#557285;margin-top:3px}
+.tead-oneframe .of-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:9px}
+.tead-oneframe .of-chip{background:#fff;border:1px solid #cbdfea;border-radius:7px;padding:6px 4px;text-align:center;font-size:.67rem;line-height:1.25;color:#24536e;font-weight:700}
+.tead-oneframe .of-route-question{padding:7px 8px;background:#fff;border:1px solid #dcd5ee;border-radius:7px;font-size:.73rem;font-weight:780}
+.tead-oneframe .of-route-hint{margin-top:6px;font-size:.64rem;color:#655d8c;line-height:1.32}
+.tead-oneframe .of-paths{position:relative;min-width:0;display:flex;flex-direction:column;gap:8px}
+.tead-oneframe .of-paths:before{content:'➜';position:absolute;top:calc(50% - 8px);left:-13px;color:#54799b;font-weight:900;font-size:1rem}
+.tead-oneframe .of-path-head{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px;min-height:25px}
+.tead-oneframe .of-path-head strong{font-size:.81rem;color:#173c53}
+.tead-oneframe .of-path-head span{font-size:.62rem;color:#667b87}
+.tead-oneframe .of-lane{border:1px solid;border-radius:10px;padding:8px 10px;position:relative;min-width:0}
+.tead-oneframe .of-lane:after{content:'➜';position:absolute;right:-14px;top:calc(50% - 10px);font-size:1.13rem;z-index:2;font-weight:900}
+.tead-oneframe .of-lane.healthy{background:#ecfaf2;border-color:#a7d9b9}
+.tead-oneframe .of-lane.healthy:after{color:#26966b}
+.tead-oneframe .of-lane.site{background:#fff7e9;border-color:#ebcc93;flex:1;display:flex;flex-direction:column}
+.tead-oneframe .of-lane.site:after{color:#c68a2f}
+.tead-oneframe .of-lane.cu{background:#f3effe;border-color:#d1c2f1}
+.tead-oneframe .of-lane.cu:after{color:#8566be}
+.tead-oneframe .of-lane-heading{display:flex;align-items:baseline;justify-content:space-between;gap:5px;flex-wrap:wrap}
+.tead-oneframe .of-lane-heading strong{font-size:.76rem;color:#20475e}
+.tead-oneframe .of-lane-heading span{font-size:.62rem;color:#557180}
+.tead-oneframe .of-lane-detail{font-size:.66rem;color:#506879;line-height:1.3;margin-top:3px}
+.tead-oneframe .of-sequence{display:flex;gap:3px;align-items:stretch;margin-top:7px;width:100%}
+.tead-oneframe .of-agent{border:1px solid #ead5b0;background:#fffdf8;border-radius:6px;padding:5px 2px;flex:1 1 0;min-width:0;text-align:center}
+.tead-oneframe .of-agent b{font-size:.67rem;display:block;color:#77490c;line-height:1.1}
+.tead-oneframe .of-agent span{font-size:.60rem;display:block;color:#684e2c;line-height:1.24;margin-top:2px;overflow-wrap:break-word}
+.tead-oneframe .of-connector{align-self:center;font-size:.72rem;font-weight:850;color:#a98040;flex:0 0 auto}
+.tead-oneframe .of-outcome{min-width:0;display:flex;flex-direction:column;gap:8px}
+.tead-oneframe .of-supervisor{background:#eaf8f3;border-color:#aad8ca;flex:1}
+.tead-oneframe .of-supervisor .of-sub{margin-top:8px}
+.tead-oneframe .of-tasks{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.tead-oneframe .of-tasks span{display:block;font-size:.68rem;line-height:1.35;color:#235e53;background:#fff;border-radius:6px;border:1px solid #d1e7e0;padding:6px 7px}
+.tead-oneframe .of-tasks span:before{content:'✓';color:#148c73;margin-right:4px;font-weight:900}
+.tead-oneframe .of-rca{background:#0b6068;border:1px solid #107c7c;border-radius:10px;color:#fff;padding:10px}
+.tead-oneframe .of-rca .of-title{color:#fff}
+.tead-oneframe .of-rca .of-sub{color:#d4f4ef}
+.tead-oneframe .of-bottom{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;border-top:1px solid #cddfea;margin-top:10px;padding-top:9px}
+.tead-oneframe .of-bottom b{color:#274e64;font-size:.70rem}
+.tead-oneframe .of-bottom span{font-size:.67rem;color:#587587}
+.tead-oneframe .of-notice{font-size:.66rem;color:#5a7183;line-height:1.32;margin-top:7px}
+@media(max-width:1210px){.tead-oneframe .of-columns{grid-template-columns:minmax(150px,.88fr) minmax(260px,1.55fr) minmax(160px,.9fr)}.tead-oneframe .of-agent span{font-size:.55rem}.tead-oneframe .of-tasks span{font-size:.63rem}}
+.tead-oneframe .of-tag{font-size:.70rem}
+.tead-oneframe .of-sub{font-size:.74rem}
+.tead-oneframe .of-title{font-size:.91rem}
+.tead-oneframe .of-chip{font-size:.73rem}
+.tead-oneframe .of-route-question{font-size:.78rem}
+.tead-oneframe .of-route-hint{font-size:.71rem}
+.tead-oneframe .of-path-head strong{font-size:.86rem}
+.tead-oneframe .of-path-head span{font-size:.69rem}
+.tead-oneframe .of-lane-heading strong{font-size:.82rem}
+.tead-oneframe .of-lane-heading span{font-size:.69rem}
+.tead-oneframe .of-lane-detail{font-size:.73rem}
+.tead-oneframe .of-site-note{font-size:.71rem;line-height:1.25;color:#9b6c34;margin-top:auto;padding-top:8px}
+.tead-oneframe .of-agent b{font-size:.75rem}
+.tead-oneframe .of-agent span{font-size:.69rem}
+.tead-oneframe .of-tasks span{font-size:.72rem}
+.tead-oneframe .of-bottom span{font-size:.72rem}
+.tead-oneframe .of-notice{font-size:.72rem}
+@media(max-width:850px){.tead-oneframe .of-columns{grid-template-columns:1fr 1.4fr}.tead-oneframe .of-outcome{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}.tead-oneframe .of-lane:after{display:none}.tead-oneframe .of-paths:before{display:none}}
+@media(max-width:560px){.tead-oneframe .of-columns{grid-template-columns:1fr}.tead-oneframe .of-outcome{grid-column:auto;display:flex}.tead-oneframe .of-paths:before{display:none}.tead-oneframe .of-route,.tead-oneframe .of-assess{flex:auto}.tead-oneframe .of-sequence{flex-wrap:wrap}.tead-oneframe .of-agent{flex:1 0 27%}.tead-oneframe .of-connector{display:none}.tead-oneframe .of-agent span{font-size:.65rem}.tead-oneframe .of-lane{padding:10px}.tead-oneframe .of-notice{margin-top:9px}}
+
 /* V1.6.1 — source-grounded, conditional infographic; all other pages/cockpit unchanged. */
 .tead-flow{--navy:#153a58;--mint:#20836f;--amber:#a86717;--violet:#7661bf;background:linear-gradient(180deg,#f7fbfe 0%,#eff6fb 100%);border:1px solid #cbdce9;border-radius:18px;padding:clamp(13px,2.0vw,25px);color:#173950;box-shadow:0 8px 26px rgba(18,58,83,.055)}
 .tead-flow *{box-sizing:border-box}
@@ -423,14 +502,12 @@ def compact_beat_content(beat):
          card('output','Recorded output / feedback',beat.get('output'),450))
 
 
-def render_investigation_flow():
+def render_detailed_investigation_flow():
     """Responsive static infographic of the actual three alternative trace routes.
 
     The runtime architecture and recorded execution data are unchanged. The
     desktop panel emphasises true route convergence; mobile stacks the lanes.
     """
-    st.subheader('End-to-End Investigation Flow')
-    st.caption('An evidence-grounded execution story: assessment → conditional routing → the selected investigation route → Supervisor synthesis → recorded RCA.')
     st.markdown("""<section class="tead-flow" role="group" aria-label="TEAD AI investigation flow with conditional healthy, cell-site and CU-domain paths">
   <div class="flow-topline"><div><div class="label">TEAD AI · RECORDED NETWORK INVESTIGATIONS</div><div class="flow-headline">From network evidence to a traceable diagnosis</div></div><div class="note">Three alternative routes, one evidence-grounded conclusion.<br>Illustrates completed synthetic-network LangGraph runs, not live inference.</div></div>
   <div class="flow-foundation">
@@ -469,6 +546,37 @@ def render_investigation_flow():
   <div class="flow-caption">Arrows represent alternative recorded routes converging on one Supervisor. The six cell/site specialists run sequentially; SP08 is a separate CU-domain path. The healthy control bypasses specialist investigation. Nothing on this page invokes a live agent, telemetry service or LLM.</div>
 </section>""", unsafe_allow_html=True)
     st.caption('Original trace evidence is retained in the scenario, replay and engineering-evidence pages. This diagram explains orchestration; it does not claim real-time network automation or validated production performance.')
+
+
+def render_investigation_flow():
+    """Compact one-frame source-grounded view, with complete v1.6.1 route on demand."""
+    st.subheader('End-to-End Investigation Flow')
+    st.caption('One-frame architecture: SP01 → one selected route → Supervisor → recorded RCA. Full engineering detail remains available below.')
+    st.markdown("""<section class="tead-oneframe" role="group" aria-label="TEAD AI compact one-frame investigation overview: SP01, alternative routes, Supervisor and RCA">
+  <div class="of-top"><strong>From network assessment to evidence-grounded RCA</strong><span class="of-tag">RECORDED SYNTHETIC 5G INVESTIGATIONS</span></div>
+  <div class="of-columns">
+    <div class="of-left">
+      <div class="of-card of-assess"><div class="of-stage"><span class="of-n">1</span><div><div class="of-title">Network Assessment &amp; Localisation</div><div class="of-sub">SP01 · 15-minute network observation window</div></div></div>
+        <div class="of-chips"><div class="of-chip">ML 01<br>Fault family</div><div class="of-chip">ML 02<br>Affected scope</div><div class="of-chip">Network<br>telemetry</div><div class="of-chip">Event<br>telemetry</div></div>
+      </div>
+      <div class="of-card of-route"><div class="of-stage"><span class="of-n">2</span><div><div class="of-title">Intelligent Routing</div><div class="of-sub">Decision from SP01 evidence</div></div></div><div class="of-route-question">Incident detected?</div><div class="of-route-hint">Select one recorded path: Healthy, Cell/Site or CU-Domain.</div></div>
+    </div>
+    <div class="of-paths"><div class="of-path-head"><strong>3 · Conditional Investigation Paths</strong><span>Alternatives · not consecutive branches</span></div>
+      <div class="of-lane healthy"><div class="of-lane-heading"><strong>✓ Healthy</strong><span>NO INCIDENT</span></div><div class="of-lane-detail">Direct Supervisor review · no specialist escalation</div></div>
+      <div class="of-lane site"><div class="of-lane-heading"><strong>Cell / Site Incident</strong><span>SIX SEQUENTIAL SPECIALISTS</span></div><div class="of-sequence" aria-label="Sequential SP02 KPI, SP03 Cell and Peer, SP04 Radio, SP05 Processing, SP06 Transport, SP07 Configuration">
+        <div class="of-agent"><b>SP02</b><span>KPI</span></div><span class="of-connector">›</span><div class="of-agent"><b>SP03</b><span>Cell &amp; Peer</span></div><span class="of-connector">›</span><div class="of-agent"><b>SP04</b><span>Radio</span></div><span class="of-connector">›</span><div class="of-agent"><b>SP05</b><span>Processing</span></div><span class="of-connector">›</span><div class="of-agent"><b>SP06</b><span>Transport</span></div><span class="of-connector">›</span><div class="of-agent"><b>SP07</b><span>Config.</span></div>
+      </div><div class="of-site-note">Recorded tools and domain evidence · complete specialist records remain inspectable</div></div>
+      <div class="of-lane cu"><div class="of-lane-heading"><strong>CU-Domain Incident</strong><span>ALTERNATIVE TO SP02–SP07</span></div><div class="of-lane-detail"><b>SP08</b> · CU-Domain &amp; Boundary Analysis</div></div>
+    </div>
+    <div class="of-outcome"><div class="of-card of-supervisor"><div class="of-stage"><span class="of-n">4</span><div><div class="of-title">Evidence Synthesis</div><div class="of-sub">One Supervisor for every selected route</div></div></div><div class="of-tasks"><span>Correlate recorded findings</span><span>Evaluate competing causes</span><span>RAG support when recorded</span><span>Qualify gaps and uncertainty</span></div></div>
+      <div class="of-rca"><div class="of-stage"><span class="of-n">5</span><div><div class="of-title">Recorded Root Cause Analysis</div><div class="of-sub">Diagnosis or healthy outcome · Evidence · Scope · Alternatives · Traceability</div></div></div></div>
+    </div>
+  </div>
+  <div class="of-bottom"><b>SUPPORTING CAPABILITIES</b><span>ML &amp; telemetry tools · Domain knowledge &amp; RAG · LangSmith traces · Post-run evaluation</span></div>
+  <div class="of-notice">Three alternative recorded routes converge on the same Supervisor. SP02–SP07 execute sequentially for cell/site incidents; SP08 is a separate CU route. Diagram does not represent live network analysis.</div>
+</section>""", unsafe_allow_html=True)
+    with st.expander('Detailed investigation flow — full agents, tools, and provenance (V1.6.1 diagram preserved)', expanded=False):
+        render_detailed_investigation_flow()
 
 
 def _mmss(seconds, decimals=1):
@@ -1020,7 +1128,7 @@ if page=='Platform Overview':
  st.caption('Future development: live adapters, operational resilience, measured inference economics, evidence sufficiency and policy-bounded actions require separate testing before production claims.')
 
 elif page=='Guided Operations Demo':
- st.markdown('<span class="tread-guided-marker" aria-hidden="true"></span><div class="cockpit-kicker">TEAD AI V1.6.1 · UNIFIED INVESTIGATION COCKPIT</div><div class="cockpit-heading">Guided Operations Demo</div>',unsafe_allow_html=True)
+ st.markdown('<span class="tread-guided-marker" aria-hidden="true"></span><div class="cockpit-kicker">TEAD AI V1.6.2 · UNIFIED INVESTIGATION COCKPIT</div><div class="cockpit-heading">Guided Operations Demo</div>',unsafe_allow_html=True)
  main_sid=sid if sid!='M05I0017' else 'M05I0003'
  mode_col,scene_col=st.columns([1,1],gap='small')
  with mode_col:
