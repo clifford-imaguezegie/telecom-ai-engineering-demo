@@ -106,7 +106,8 @@ def test_no_cockpit_impact_on_other_pages(monkeypatch):
 def test_source_preserves_state_persistence_contracts():
     source=APP.read_text('utf-8')
     assert 'on_change=_seek_from_widget,args=(key,seek_key,last)' in source
-    assert '_set_playhead(play,seek_key,0,last)' in source
+    assert 'on_click=_restart_guided_player,args=(key,)' in source
+    assert 'st.session_state[player_key] = {' in source
     assert 'View complete recorded agent route' in source
     assert 'Full current-stage messages and localisation evidence' in source
     assert 'guided_agent_drilldown(case,beat[\'agent\'],beat)' in source

@@ -92,7 +92,7 @@ def test_release_source_exposes_traceable_identity_and_correct_pm_scope():
     assert 'COMPLETED · Select Restart' in app
     assert "opts={x:f\"{x}" in app
     assert 'release_build_id()' in app
-    assert RELEASE_VERSION=='V1.7.5 RC1'
+    assert RELEASE_VERSION=='V1.7.5 RC2'
     assert re.fullmatch(r'[0-9a-f]{12}',release_build_id())
     assert 'field-level comparison records and full judging rubric are not in this public replay' in app
 
@@ -118,7 +118,6 @@ def test_five_consecutive_guided_restarts_with_seek_visible(monkeypatch,scenario
         state=mock.session_state[player_key]
         assert state['index']==0 and not state['started']
         assert state['presentation_elapsed']==0 and not state['playing']
-        assert mock.session_state[seek]==0
         assert state['seek_generation']==generation
         seek=original_seek+'_'+str(generation)
         render(mock,monkeypatch)

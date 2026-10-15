@@ -34,6 +34,10 @@ class InteractiveStreamlit(MockStreamlit):
         key=kwargs.get('key')
         if key in self.click_next:
             self.click_next.remove(key)
+            # Streamlit executes an on_click callback ahead of the rerender.
+            callback = kwargs.get('on_click')
+            if callback:
+                callback(*(kwargs.get('args') or ()), **(kwargs.get('kwargs') or {}))
             return True
         return False
 

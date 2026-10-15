@@ -874,13 +874,18 @@ def cockpit_status_html(item, case, status, alert, durations, elapsed, current_o
             f'<span class="flag{" alert" if alert else ""}">{escape(status)}</span></div></section>')
 
 def _seek_from_widget(player_key, seek_key, last):
-    """Consume a user slider event before Streamlit rerenders its fragment.
+    """Consume a current slider event, never one from a retired replay instance.
 
-    Widget values must never be overwritten with a stale player index on
-    ordinary fragment refreshes. In particular, post-Restart dragging must
-    remain authoritative until the user makes another playback action.
+    A reset remounts the scene slider under a new generation. This guard
+    prevents an in-flight update from the old component reinstating a terminal
+    scene after the user's Restart click.
     """
     play = st.session_state[player_key]
+    if player_key.startswith('ops_player_'):
+        generation = int(play.get('seek_generation', 0))
+        active_seek = player_key + '_seek' + ('_' + str(generation) if generation else '')
+        if seek_key != active_seek:
+            return
     index = int(st.session_state[seek_key])
     play['index'] = max(0, min(last, index))
     if 'started' in play:  # Guided demo: seeking reveals the chosen recorded scene.
@@ -1055,6 +1060,28 @@ def guided_agent_drilldown(case, current_agent, current_beat):
             st.caption(f"Saved {agent_label(pick)} execution: {format_duration(n.get('duration_seconds'))} · {nice_time(n.get('start_time'))} to {nice_time(n.get('end_time'))}")
 
 
+def _restart_guided_player(player_key):
+    """Atomically reset the guided player *before* Streamlit redraws widgets.
+
+    Streamlit button callbacks run before the next script/fragment render. This
+    is intentionally a replacement state object with a new slider identity:
+    neither a stale mounted seek value nor an old mutable player reference may
+    bring a completed state back after Reset.
+    """
+    previous = st.session_state[player_key]
+    previous_generation = int(previous.get('seek_generation', 0))
+    previous_seek = player_key + '_seek' + ('_' + str(previous_generation) if previous_generation else '')
+    if previous_seek in st.session_state:
+        # Callback executes before UI instantiation; retiring widget state is safe.
+        st.session_state[previous_seek] = 0
+    st.session_state[player_key] = {
+        'index': 0, 'playing': False, 'seconds': previous['seconds'],
+        'last_tick': time.monotonic(), 'carry': 0.,
+        'presentation_elapsed': 0., 'started': False,
+        'seek_generation': int(previous.get('seek_generation', 0)) + 1,
+    }
+
+
 @st.fragment(run_every='1s')
 def guided_operations_player(selected_sid, include_healthy, executive=False):
     """V1.7.0 staged story of independent saved traces, not a live network simulation.
@@ -1155,15 +1182,12 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
             play['carry']=0.
             st.rerun(scope='fragment')
     with controls[3]:
-        if st.button('↺ Restart',use_container_width=True,key=key+'_restart'):
-            # Regenerate the seek widget's identity: an expanded Streamlit slider
-            # must not replay its stale terminal value on the next fragment rerun.
-            play.update({'index':0,'playing':False,'carry':0.,'presentation_elapsed':0.,
-                         'started':False,'last_tick':time.monotonic(),
-                         'seek_generation':play.get('seek_generation',0)+1})
-            # Reset the previous widget as well, then remount it under a new key.
-            _set_playhead(play,seek_key,0,last)
-            st.rerun(scope='fragment')
+        if st.button('↺ Restart',use_container_width=True,key=key+'_restart',
+                     on_click=_restart_guided_player,args=(key,)):
+            # A *full-app* rerun remounts the scene slider and controls after
+            # the callback's atomic reset. Fragment-only resets occasionally
+            # left the old completed widgets mounted in live Cloud sessions.
+            st.rerun()
     with controls[4]:
         speeds=[4,5,6,7,8] if executive else [3,5,7,10,14]
         speed=st.selectbox('Playback pacing',speeds,
@@ -1304,6 +1328,44 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
             st.rerun()
 
 
+def _workspace_changed():
+    """Record an explicit destination change, not a fragment refresh."""
+    st.session_state['page_navigation_epoch'] = int(st.session_state.get('page_navigation_epoch', 0)) + 1
+    st.session_state['page_navigation_pending'] = True
+
+
+def _restore_destination_context():
+    """Scroll the containing Streamlit app to its new page heading once.
+
+    The HTML component has no network calls, no persistence, and no access to
+    evidence. It only interacts with its own hosting page for scroll recovery.
+    This is a presentational enhancement; browsers that restrict iframe parent
+    access still display the native page and sidebar normally.
+    """
+    if not st.session_state.pop('page_navigation_pending', False):
+        return
+    epoch = int(st.session_state.get('page_navigation_epoch', 0))
+    embed_workflow_html('''<script>
+    (() => {
+      const epoch = '__EPOCH__';
+      const reset = () => {
+        try {
+          const host = window.parent;
+          const doc = host.document;
+          const candidates = [doc.scrollingElement,
+            doc.querySelector('[data-testid="stAppViewContainer"]'),
+            doc.querySelector('section.main'), doc.querySelector('main')];
+          candidates.forEach(el => { if (el) el.scrollTop = 0; });
+          host.scrollTo(0, 0);
+        } catch (_) { /* browser sandbox may refuse parent access */ }
+      };
+      reset();
+      requestAnimationFrame(reset);
+      setTimeout(reset, 90);
+    })();
+    </script>'''.replace('__EPOCH__',str(epoch)), height=0, scrolling=False)
+
+
 # Scenario selection is persistent business state, not ephemeral widget state.
 # Streamlit may delete a widget key when it disappears from a page.
 manifest=load_manifest()
@@ -1326,18 +1388,23 @@ st.sidebar.caption('Agentic Telecom Network Investigation & RCA')
 st.sidebar.caption(f'{RELEASE_VERSION} · build {release_build_id()} · {RELEASE_DATE}')
 st.sidebar.divider()
 if 'requested_page' in st.session_state:
-    st.session_state['nav_page']=st.session_state.pop('requested_page')
+    requested = st.session_state.pop('requested_page')
+    if requested != st.session_state.get('nav_page'):
+        st.session_state['page_navigation_epoch'] = int(st.session_state.get('page_navigation_epoch', 0)) + 1
+        st.session_state['page_navigation_pending'] = True
+    st.session_state['nav_page'] = requested
 if st.session_state.get('selected_scenario') not in _valid_scenarios:
     st.session_state['selected_scenario']=_default_scenario
 if 'nav_page' not in st.session_state:
     st.session_state['nav_page']='Platform Overview'
-page=st.sidebar.radio('Workspace',PAGES,key='nav_page')
+page=st.sidebar.radio('Workspace',PAGES,key='nav_page',on_change=_workspace_changed)
 opts={x:f"{x} · {next(c['title'] for c in manifest['cases'] if c['scenario_id']==x)}" for x in _valid_scenarios}
 sync_scenario_picker('sidebar_scenario_picker')
 st.sidebar.selectbox('Select scenario ▾',options=_valid_scenarios,format_func=lambda x:opts[x],
                      key='sidebar_scenario_picker',on_change=sync_scenario_from,args=('sidebar_scenario_picker',))
 sid=st.session_state['selected_scenario']
 c=load_case(sid)
+_restore_destination_context()
 st.sidebar.divider()
 st.sidebar.caption('RECORDED INVESTIGATION DEMO')
 st.sidebar.caption('No live agent, telemetry, LLM, API key or paid inference calls.')
