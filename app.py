@@ -12,7 +12,7 @@ from operational_demo import (guided_sequence, executive_sequence, get_run_durat
                               format_clock, sp01_tools_unlocked, available_agents)
 from html import escape
 from presentation import agent_label, format_duration, agent_execution_rows, benchmark_summary, phase_execution_ranges
-from guided_story_ui import flow_html, evidence_html, focus_html, boundary_html, phase_for
+from guided_story_ui import flow_html, evidence_html, focus_html, boundary_html, phase_for, board_html
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -365,6 +365,27 @@ h1,h2,h3{letter-spacing:-.025em}
 @media(max-width:720px){.gs-flow-grid{grid-template-columns:1fr;gap:4px}.gs-arrow{transform:rotate(90deg);font-size:15px;height:16px}.gs-branches{grid-template-columns:1fr;gap:4px}.gs-path{min-height:36px}.gs-evidence-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.gs-evidence{min-height:110px;max-height:110px}.gs-status{flex-wrap:wrap}.gs-status .gs-duration{border-left:0;padding-left:0}}
 @media(max-width:420px){.gs-evidence-grid{grid-template-columns:1fr}.gs-evidence{min-height:82px;max-height:100px}.gs-route{padding:9px}}
 
+
+/* V1.7.1 — explicit timing + context-specific results, no independent time simulation. */
+.block-container:has(.tread-guided-marker){padding-top:1.7rem!important}
+.cockpit-heading{padding-top:2px;line-height:1.35;margin-bottom:2px}
+.gs-timeline{border:1px solid #b7d7e2;background:#edf9fb;border-radius:9px;padding:7px 11px;margin:4px 0 8px;color:#254f61}
+.gs-timeline-stats{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;font-size:.69rem;font-variant-numeric:tabular-nums}
+.gs-timeline-stats b{font-size:.62rem;color:#0d5f6f;margin-right:5px;letter-spacing:.06em}
+.gs-timeline-track{height:9px;border-radius:10px;overflow:hidden;background:#c5dce3;margin:7px 0 4px}
+.gs-timeline-fill{height:100%;border-radius:10px;background:#128d81;transition:width .22s ease}
+.gs-timeline-note{color:#4f7382;font-size:.60rem;line-height:1.2}
+.gs-rca-board .gs-evidence{min-height:150px;max-height:160px}
+.gs-rca-board .gs-rca-primary{border:2px solid #159979;background:#d8f9e8;box-shadow:0 0 0 2px rgba(21,153,121,.12)}
+.gs-rca-board .gs-evidence b{font-size:.79rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.gs-rca-board .gs-evidence p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.gs-history{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:5px 0 0;font-size:.61rem;color:#417082}
+.gs-history b{font-size:.61rem;margin-right:4px;color:#235369}
+.gs-history-chip{background:#dff5e9;border:1px solid #b0dccc;color:#165949;border-radius:5px;padding:4px 6px;font-variant-numeric:tabular-nums}
+.gs-focus-final{background:#eafaf1;border-color:#6bbda6}
+.gs-focus-final .gs-result{background:#d9f7e9;border-left-color:#11856e}
+.gs-focus-final .gs-result p{font-size:.92rem;line-height:1.5}
+@media(max-width:720px){.gs-timeline-stats{display:grid;grid-template-columns:1fr 1fr}.gs-timeline-stats span:last-child{grid-column:1/-1}.gs-rca-board .gs-evidence{min-height:155px;max-height:185px}}
 </style>''',unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False)
@@ -769,7 +790,7 @@ def render_solution_intro(cases, include_architecture=True):
  Telecom fault diagnosis often involves manually correlating performance counters, alarms, configuration,
  and multi-domain telemetry. TEAD AI demonstrates how ML-assisted localisation, conditional LangGraph
  orchestration, specialist engineering analysis, and knowledge-grounded Supervisor reasoning can produce
- a traceable RCA conclusion.
+ a traceable RCA conclusion. The experimental architecture illustrates a pathway to <strong>faster engineering decisions and governed autonomous-network operations</strong>; production benefits remain unvalidated.
  <br><br><strong>What is this?</strong> An experimental 5G investigation system evaluated on
  <strong>nine completed synthetic-network scenarios</strong> (eight incidents and one healthy control).
  The public site shows inspectable <strong>recorded executions</strong>, not live network diagnosis.
@@ -1053,6 +1074,11 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
     previous_index=play['index']
     boundary_index=next((i for i in range(len(timeline)-1)
         if timeline[i]['scenario_id']!=timeline[i+1]['scenario_id']),None)
+    # Final recorded RCA is a terminal view: do not accrue presentation time
+    # or restart it implicitly after arriving at the final scene.
+    if play['playing'] and play['index']>=last:
+        play['playing']=False
+        play['carry']=0.
     # Explicit comparison boundary: never advance into the second trace automatically.
     if play['playing'] and boundary_index is not None and play['index']==boundary_index:
         play['playing']=False
@@ -1085,14 +1111,13 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
     # Controls are above the evidence; one identifiable result changes per scene.
     controls=st.columns([1.1,.85,.85,.9,1.45])
     with controls[0]:
-        if st.button('⏸ Pause' if play['playing'] else '▶ Play',type='primary',
+        if st.button('✓ Completed · Restart to replay' if play.get('started') and play['index']==last else
+                     '⏸ Pause' if play['playing'] else '▶ Play',type='primary',
+                     disabled=play.get('started') and play['index']==last,
                      use_container_width=True,key=key+'_play'):
             if boundary_index is not None and play['index']==boundary_index and play.get('started'):
                 play['playing']=False
             else:
-                if not play['playing'] and play['index']==last:
-                    _set_playhead(play,seek_key,0,last)
-                    play['presentation_elapsed']=0.
                 play['started']=True
                 play['playing']=not play['playing']
             play['carry']=0.
@@ -1165,8 +1190,47 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
         +('PAUSED · Press Play to begin' if ready else
           'PLAYING · Next evidence will appear in sequence' if play['playing'] else
           'PAUSED · Use Next to follow changes')+'</span></div>',unsafe_allow_html=True)
-    st.markdown(flow_html(item,timeline[:idx+1] if not ready else [],ready=ready),unsafe_allow_html=True)
-    st.markdown(evidence_html(timeline,idx,ready=ready),unsafe_allow_html=True)
+    # Separate view/presentation time from original recorded trace time; seek uses
+    # saved timestamps only, and never fabricates an intermediate runtime marker.
+    case_positions=[i for i,x in enumerate(timeline) if x['scenario_id']==sid]
+    this_case_index=case_positions.index(idx)
+    scene_pct=0 if ready else round(100*(this_case_index+1)/len(case_positions))
+    original_offset=event_trace_offset(case,beat) if not ready else None
+    if original_offset is None and not ready:
+        for earlier in reversed(case_positions[:this_case_index+1]):
+            value=event_trace_offset(case,timeline[earlier]['beat'])
+            if value is not None:
+                original_offset=value
+                break
+    if ready:
+        time_marker='Awaiting first recorded marker'
+    elif original_offset is None:
+        time_marker='No exact marker for this scene'
+    elif event_trace_offset(case,beat) is None:
+        time_marker='Last recorded marker '+format_clock(original_offset)
+    else:
+        time_marker=format_clock(original_offset)+' elapsed in recorded run'
+    st.markdown(
+        '<section class="gs-timeline" aria-label="Presentation and recorded investigation progress">'
+        '<div class="gs-timeline-stats">'
+        '<span><b>SCENE PROGRESS</b> '+escape(f'{this_case_index+1 if not ready else 0}/{len(case_positions)} · {scene_pct}%')+'</span>'
+        '<span><b>WATCH TIME</b> '+escape(format_clock(play['presentation_elapsed']))+'</span>'
+        '<span><b>ORIGINAL TRACE</b> '+escape(time_marker)+' / '+escape(format_clock(original['total']))+'</span>'
+        '</div><div class="gs-timeline-track" role="progressbar" aria-label="Recorded scene presentation progress" '
+        'aria-valuenow="'+str(scene_pct)+'" aria-valuemin="0" aria-valuemax="100">'
+        '<div class="gs-timeline-fill" style="width:'+str(scene_pct)+'%"></div></div>'
+        '<div class="gs-timeline-note">Scene progress and watch time are presentation indicators; original trace time comes from recorded timestamps.</div>'
+        '</section>',unsafe_allow_html=True)
+    # Keep the result that just changed immediately beneath the status and
+    # progress. For specialists and Supervisor, never bury the finding below
+    # the full workflow; SP01 retains flow-first onboarding.
+    prominent_results=(not ready and beat['agent']!='SP01')
+    if prominent_results:
+        st.markdown(board_html(item,timeline,idx,ready=ready),unsafe_allow_html=True)
+        st.markdown(flow_html(item,timeline[:idx+1],ready=False),unsafe_allow_html=True)
+    else:
+        st.markdown(flow_html(item,timeline[:idx+1] if not ready else [],ready=ready),unsafe_allow_html=True)
+        st.markdown(board_html(item,timeline,idx,ready=ready),unsafe_allow_html=True)
     st.markdown(focus_html(item,idx+1,len(timeline),ready=ready),unsafe_allow_html=True)
 
     at_boundary=boundary_index is not None and idx==boundary_index and play.get('started')
@@ -1239,7 +1303,7 @@ def sync_scenario_picker(widget_key):
         st.session_state[widget_key]=canonical
 
 st.sidebar.markdown('### ◈ TEAD AI')
-st.sidebar.caption('Telecom AI Engineering Platform')
+st.sidebar.caption('Agentic Telecom Network Investigation & RCA')
 st.sidebar.divider()
 if 'requested_page' in st.session_state:
     st.session_state['nav_page']=st.session_state.pop('requested_page')
@@ -1260,7 +1324,7 @@ st.sidebar.caption('No live agent, telemetry, LLM, API key or paid inference cal
 st.sidebar.caption('Synthetic experimental network • not production operations')
 
 if page!='Guided Operations Demo':
- st.markdown(f'''<div class="hero"><div class="eyebrow">TEAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TEAD AI — Telecom AI Engineering Platform</h1><div class="sub">Intelligent network assessment · ML-assisted localisation · Specialist AI investigation · Knowledge-grounded root cause analysis</div></div>''',unsafe_allow_html=True)
+ st.markdown(f'''<div class="hero"><div class="eyebrow">TEAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TEAD AI — Agentic Telecom Network Investigation &amp; RCA Platform</h1><div class="sub">ML-assisted network assessment · Multi-agent engineering investigation · Evidence-grounded root cause analysis</div></div>''',unsafe_allow_html=True)
 
 if page=='Platform Overview':
  heading('Discover TEAD AI','Evidence-grounded investigation and RCA in under five minutes — using recorded synthetic 5G experiments, not live production data.')

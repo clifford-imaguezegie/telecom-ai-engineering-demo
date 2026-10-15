@@ -93,6 +93,9 @@ def event_trace_offset(case, beat):
     if not value and beat.get('kind') == 'feedback' and beat.get('agent','').startswith('SP'):
         value = next((n.get('end_time') for n in case['observed_nodes']
                       if n.get('name') == beat['agent'] and n.get('depth') == 1), None)
+    if not value and beat.get('kind') == 'decision' and beat.get('agent') == 'SUPERVISOR':
+        value = next((n.get('end_time') for n in case['observed_nodes']
+                      if n.get('name') == 'SUPERVISOR' and n.get('depth') == 1), None)
     if not value and beat.get('kind') == 'report' and beat.get('agent') == 'FINAL':
         value = case.get('trace_end_utc')
     if not value:
@@ -173,7 +176,7 @@ def executive_sequence(timeline):
         specialists=[x for x in incidents if x['beat']['kind']=='feedback' and x['beat']['agent'].startswith('SP') and x['beat']['agent']!='SP01']
         # Keep chronological specialist feedback as recorded, rather than imply concurrency.
         if specialists:
-            indexes=([0,len(specialists)//2,len(specialists)-1] if len(specialists)>2 else list(range(len(specialists))))
+            indexes=([0,2,len(specialists)-1] if len(specialists)>2 else list(range(len(specialists))))
             for i in sorted(set(indexes)):
                 if specialists[i] not in chosen:chosen.append(specialists[i])
         for kind,agent in [('rag','SUPERVISOR'),('decision','SUPERVISOR'),('report','FINAL')]:

@@ -91,7 +91,7 @@ def test_healthy_exec_presents_real_tools_before_healthy_conclusion():
     label=phase_for(dict(seq[-1],case=c))
     assert label[0]==3 and 'Healthy' in label[1]
     html=evidence_html(seq,d)
-    assert html.count('RECEIVED')==4
+    assert html.count('RECORDED')==4
 
 
 def test_comparison_pauses_at_explicit_case_boundary(monkeypatch):
