@@ -689,26 +689,34 @@ def architecture_diagram():
 
 
 def render_solution_intro(cases, include_architecture=True):
- """Concise visitor onboarding; performance derived from recorded LangSmith runs."""
- b=benchmark_summary(cases)
- st.markdown("""<div style="font-size:1.04rem;line-height:1.55;margin:.15rem 0 .65rem">
- <strong>What is this?</strong> An AI-enabled 5G network investigation system that combines
- <strong>ML-assisted fault identification</strong>, recorded network telemetry,
- specialist AI agents and a <strong>Curated Telecom Knowledge Base</strong> to produce
- evidence-grounded root cause analysis. Watch a real recorded execution from the synthetic experimental network.
- </div>""",unsafe_allow_html=True)
+ """Measured visitor milestones; one SP01 completion, not separate latency clocks."""
+ b = benchmark_summary(cases)
+ st.markdown("""<div style="font-size:1.01rem;line-height:1.5;margin:.15rem 0 .65rem">
+ <strong>From complex network investigations to evidence-grounded RCA in under five minutes.</strong>
+ Telecom fault diagnosis often involves manually correlating performance counters, alarms, configuration,
+ and multi-domain telemetry. TEAD AI demonstrates how ML-assisted localisation, conditional LangGraph
+ orchestration, specialist engineering analysis, and knowledge-grounded Supervisor reasoning can produce
+ a traceable RCA conclusion.
+ <br><br><strong>What is this?</strong> An experimental 5G investigation system evaluated on
+ <strong>nine completed synthetic-network scenarios</strong> (eight incidents and one healthy control).
+ The public site shows inspectable <strong>recorded executions</strong>, not live network diagnosis.
+ </div>""", unsafe_allow_html=True)
  st.markdown('**Demonstrated investigation milestones**')
- x,y,z=st.columns(3)
- facts=[(x,'< 1 min','Assess network health',f"Localisation agent assessment • {b['health_assessment_under_1min']}/{b['health_assessment_total']} recorded scenarios"),
-        (y,'≤ 2 min','Localise affected scope',f"Localisation agent handover • {b['localisation_under_2min']}/{b['localisation_total']} recorded scenarios"),
-        (z,'< 5 min','Evidence-grounded RCA',f"Full incident investigation • {b['incident_rca_under_5min']}/{b['incident_total']} incident scenarios")]
+ x,y,z = st.columns(3)
+ facts = [
+  (x, '< 25 sec', 'Assess network health',
+   f"SP01 assessment • {b['health_assessment_under_25sec']}/{b['health_assessment_total']} recorded scenarios"),
+  (y, f"{b['localisation_under_25sec']}/{b['localisation_total']}", 'Localise affected scope',
+   'Incident cases • same SP01 execution (under 25 sec)'),
+  (z, '< 5 min', 'Evidence-grounded RCA',
+   f"Full incident investigation • {b['incident_rca_under_5min']}/{b['incident_total']} incident scenarios"),
+ ]
  for col,num,title,detail in facts:
   with col:
-   st.markdown(f'<div class="ops-milestone"><div class="number">{escape(num)}</div><div class="label">{escape(title)}</div><div class="detail">{escape(detail)}</div></div>',unsafe_allow_html=True)
- st.caption('Benchmarks are from completed synthetic-network LangSmith traces, not production SLAs or validated MTTR savings. Health assessment and initial fault-scope localisation share the same recorded SP01 completion timestamp; they are not two independently timed milestones. No specialist-localisation latency is claimed.')
+   st.markdown(f'<div class="ops-milestone"><div class="number">{escape(str(num))}</div><div class="label">{escape(title)}</div><div class="detail">{escape(detail)}</div></div>',unsafe_allow_html=True)
+ st.caption('SP01 took 15.0–24.3 seconds across nine recorded synthetic-network scenarios. Health assessment and initial affected-scope localisation share the same SP01 completion timestamp; they are not independent timed milestones. The eight incident RCA results completed in under five minutes. These observations are not production SLAs or validated MTTR savings.')
  if include_architecture:
   architecture_diagram()
-
 
 
 def render_value_proposition():
@@ -1106,7 +1114,7 @@ if page!='Guided Operations Demo':
  st.markdown(f'''<div class="hero"><div class="eyebrow">TEAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TEAD AI — Telecom AI Engineering Platform</h1><div class="sub">Intelligent network assessment · ML-assisted localisation · Specialist AI investigation · Knowledge-grounded root cause analysis</div></div>''',unsafe_allow_html=True)
 
 if page=='Platform Overview':
- heading('Discover TEAD AI','Network fault investigation often requires engineers to correlate radio, processing, transport and configuration evidence. See how agent-led ML, telemetry, specialised analysis and telecom knowledge produce a traceable RCA.')
+ heading('Discover TEAD AI','Evidence-grounded investigation and RCA in under five minutes — using recorded synthetic 5G experiments, not live production data.')
  render_solution_intro([load_case(x) for x in manifest['scenario_order']],include_architecture=False)
  st.markdown('### Choose your experience')
  st.write('Follow the Network Health & Localisation Agent through its two ML predictions, network telemetry, specialist analysis, knowledge-grounded reasoning and final RCA. Pause anywhere to inspect the original evidence.')

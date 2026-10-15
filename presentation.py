@@ -92,8 +92,10 @@ def benchmark_summary(cases):
             if chain is not None and isinstance(chain.get('duration_seconds'), (int,float)):
                 localised.append(float(chain['duration_seconds']))
     return {
+        'health_assessment_under_25sec': sum(t < 25 for t in sp01),
         'health_assessment_under_1min': sum(t < 60 for t in sp01),
         'health_assessment_total': len(sp01),
+        'localisation_under_25sec': sum(t < 25 for t in localised),
         'localisation_under_2min': sum(t <= 120 for t in localised),
         'localisation_total': len(localised),
         'incident_rca_under_5min': sum(t < 300 for t in complete),

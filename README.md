@@ -1,3 +1,7 @@
+# TEAD AI V1.6.3 — Measured SP01 Assessment Milestone and Onboarding
+
+**Latest focused release.** The Platform Overview now leads with measured experimental outcomes and accurately states **network health assessment in under 25 seconds** (9/9 recorded scenarios; maximum 24.3 seconds). Initial affected-scope localisation is shown as **8/8 incident cases within the same SP01 execution**, not as a separately timed two-minute milestone. Eight incident RCA traces completed in under five minutes. The V1.6.2 single-frame architecture, detailed flow, evidence, cockpit and experimental qualifiers are retained. See `V1_6_3_RELEASE_NOTES.md`.
+
 # TEAD AI V1.6.2 — Single-Frame Architecture Overview
 
 **Latest presentation refinement.** Platform Overview now leads with a compact connected architecture map that keeps SP01, intelligent routing, three alternative investigation paths, Supervisor evidence synthesis and final RCA visible in one 1366×768 laptop component viewport after navigating to the architecture section. The original detailed V1.6.1 diagram is **preserved in an expander**, rather than removed. The value proposition, observed timing ranges, network and engineering learnings, legacy technical explanation, eight pages, unified investigation cockpit and all recorded source data remain intact. See [`V1_6_2_RELEASE_NOTES.md`](V1_6_2_RELEASE_NOTES.md) for QA boundaries and deployment steps. Local component checks are **not** a live Streamlit browser acceptance certification.
