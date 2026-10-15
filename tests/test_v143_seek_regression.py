@@ -80,6 +80,9 @@ def test_guided_post_restart_slider_persists_after_fragment_refresh(monkeypatch,
     with pytest.raises(FragmentRerun):render(mock,monkeypatch)
     assert mock.session_state[key]['index']==0
     assert mock.session_state[seek]==0
+    # Restart remounts the slider under a fresh key, preventing the old
+    # browser widget's terminal value from replaying onto the new Ready state.
+    seek=seek+'_'+str(mock.session_state[key]['seek_generation'])
     render(mock,monkeypatch)
     assert mock.seek_values[seek]==0
     # Browser user interaction: the saved slider value is authoritative.

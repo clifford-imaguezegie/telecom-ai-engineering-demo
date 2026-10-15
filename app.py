@@ -15,6 +15,8 @@ from presentation import agent_label, format_duration, agent_execution_rows, ben
 from guided_story_ui import flow_html, evidence_html, focus_html, boundary_html, phase_for, board_html
 from network_overview import derive_inventory, observed_tools, topology_html, tools_html, NETWORK_STYLE, AGENT_ROLES, TOOL_NAMES
 from value_solutions import render_page as render_value_solutions_page
+from measurement_series import partition_measurements
+from release_identity import release_build_id, RELEASE_VERSION, RELEASE_DATE
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -388,15 +390,16 @@ h1,h2,h3{letter-spacing:-.025em}
 .gs-timeline-note{color:#4f7382;font-size:.60rem;line-height:1.2}
 .gs-rca-board .gs-evidence{min-height:150px;max-height:160px}
 .gs-rca-board .gs-rca-primary{border:2px solid #159979;background:#d8f9e8;box-shadow:0 0 0 2px rgba(21,153,121,.12)}
-.gs-rca-board .gs-evidence b{font-size:.79rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
-.gs-rca-board .gs-evidence p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.gs-rca-board .gs-evidence b{font-size:.79rem;line-height:1.25;display:block;overflow-wrap:anywhere;white-space:normal}
+.gs-rca-board .gs-evidence p{display:block;overflow-wrap:anywhere;white-space:normal}
+.gs-rca-board .gs-evidence{max-height:none;min-height:150px;height:auto;overflow:visible}
 .gs-history{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:5px 0 0;font-size:.61rem;color:#417082}
 .gs-history b{font-size:.61rem;margin-right:4px;color:#235369}
 .gs-history-chip{background:#dff5e9;border:1px solid #b0dccc;color:#165949;border-radius:5px;padding:4px 6px;font-variant-numeric:tabular-nums}
 .gs-focus-final{background:#eafaf1;border-color:#6bbda6}
 .gs-focus-final .gs-result{background:#d9f7e9;border-left-color:#11856e}
 .gs-focus-final .gs-result p{font-size:.92rem;line-height:1.5}
-@media(max-width:720px){.gs-timeline-stats{display:grid;grid-template-columns:1fr 1fr}.gs-timeline-stats span:last-child{grid-column:1/-1}.gs-rca-board .gs-evidence{min-height:155px;max-height:185px}}
+@media(max-width:720px){.gs-timeline-stats{display:grid;grid-template-columns:1fr 1fr}.gs-timeline-stats span:last-child{grid-column:1/-1}.gs-rca-board .gs-evidence{min-height:155px;max-height:none;height:auto}}
 </style>''',unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False)
@@ -616,7 +619,7 @@ def render_detailed_investigation_flow():
     st.markdown("""<section class="tead-flow" role="group" aria-label="TEAD AI investigation flow with conditional healthy, cell-site and CU-domain paths">
   <div class="flow-topline"><div><div class="label">TEAD AI · RECORDED NETWORK INVESTIGATIONS</div><div class="flow-headline">From network evidence to a traceable diagnosis</div></div><div class="note">Three alternative routes, one evidence-grounded conclusion.<br>Illustrates completed synthetic-network LangGraph runs, not live inference.</div></div>
   <div class="flow-foundation">
-    <div class="flow-card sp01"><div class="flow-stage-head"><span class="flow-stage-id">1</span><div><div class="flow-stage-title">Network Assessment &amp; Localisation</div><div class="flow-stage-sub">SP01 · Network Health &amp; Localisation Agent</div></div></div><div class="flow-stage-sub">Assess the 15-minute observation window, check network health and identify the affected fault family and scope.</div>
+    <div class="flow-card sp01"><div class="flow-stage-head"><span class="flow-stage-id">1</span><div><div class="flow-stage-title">Network Assessment &amp; Localisation</div><div class="flow-stage-sub">SP01 · Network Health &amp; Localisation Agent</div></div></div><div class="flow-stage-sub">Assess PM and event telemetry across the scenario observation window, check network health and identify the likely fault family and affected scope.</div>
       <div class="flow-inputs"><div class="flow-input"><span class="symbol">◈</span><b>ML 01</b><span>Fault-family support</span></div><div class="flow-input"><span class="symbol">◎</span><b>ML 02</b><span>Affected-scope support</span></div><div class="flow-input"><span class="symbol">▥</span><b>Network</b><span>Overview telemetry</span></div><div class="flow-input"><span class="symbol">⌁</span><b>Events</b><span>Event telemetry</span></div></div>
     </div>
     <div class="flow-arrow-inline" aria-hidden="true">➜</div>
@@ -661,7 +664,7 @@ def render_investigation_flow():
   <div class="of-top"><strong>From network assessment to evidence-grounded RCA</strong><span class="of-tag">RECORDED SYNTHETIC 5G INVESTIGATIONS</span></div>
   <div class="of-columns">
     <div class="of-left">
-      <div class="of-card of-assess"><div class="of-stage"><span class="of-n">1</span><div><div class="of-title">Network Assessment &amp; Localisation</div><div class="of-sub">SP01 · 15-minute network observation window</div></div></div>
+      <div class="of-card of-assess"><div class="of-stage"><span class="of-n">1</span><div><div class="of-title">Network Assessment &amp; Localisation</div><div class="of-sub">SP01 · PM and event telemetry · selected scenario observation window</div></div></div>
         <div class="of-chips"><div class="of-chip">ML 01<br>Fault family</div><div class="of-chip">ML 02<br>Affected scope</div><div class="of-chip">Network<br>telemetry</div><div class="of-chip">Event<br>telemetry</div></div>
       </div>
       <div class="of-card of-route"><div class="of-stage"><span class="of-n">2</span><div><div class="of-title">Intelligent Routing</div><div class="of-sub">Decision from SP01 evidence</div></div></div><div class="of-route-question">Incident detected?</div><div class="of-route-hint">Select one recorded path: Healthy, Cell/Site or CU-Domain.</div></div>
@@ -1078,7 +1081,7 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
                                'presentation_elapsed':0.,'started':False}
     play=st.session_state[key]
     last=len(timeline)-1
-    seek_key=key+'_seek'
+    seek_key=key+'_seek'+('_'+str(play['seek_generation']) if play.get('seek_generation',0) else '')
     if seek_key not in st.session_state:
         st.session_state[seek_key]=play['index']
     now=time.monotonic()
@@ -1153,8 +1156,12 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
             st.rerun(scope='fragment')
     with controls[3]:
         if st.button('↺ Restart',use_container_width=True,key=key+'_restart'):
-            play.update({'playing':False,'carry':0.,'presentation_elapsed':0.,
-                         'started':False,'last_tick':time.monotonic()})
+            # Regenerate the seek widget's identity: an expanded Streamlit slider
+            # must not replay its stale terminal value on the next fragment rerun.
+            play.update({'index':0,'playing':False,'carry':0.,'presentation_elapsed':0.,
+                         'started':False,'last_tick':time.monotonic(),
+                         'seek_generation':play.get('seek_generation',0)+1})
+            # Reset the previous widget as well, then remount it under a new key.
             _set_playhead(play,seek_key,0,last)
             st.rerun(scope='fragment')
     with controls[4]:
@@ -1197,9 +1204,10 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
         +'<div class="gs-duration"><strong>'+escape(format_clock(original['total']))
         +'</strong>Original recorded duration</div></div>',unsafe_allow_html=True)
     st.markdown('<div class="gs-progress"><b>'+escape('Scene 0 · Ready' if ready else
-        f'Chapter {phase}/{3 if not case["derived_display"]["incident_present"] else 6} · Scene {idx+1}/{len(timeline)}')+'</b><span>'
+        f'Chapter {phase}/{3 if not case["derived_display"]["incident_present"] else 6} · Overall scene {idx+1}/{len(timeline)}' if include_healthy and selected_sid!=healthy_sid else f'Chapter {phase}/{3 if not case["derived_display"]["incident_present"] else 6} · Scene {idx+1}/{len(timeline)}')+'</b><span>'
         +('PAUSED · Press Play to begin' if ready else
           'PLAYING · Next evidence will appear in sequence' if play['playing'] else
+          'COMPLETED · Select Restart or review the RCA below' if play['index']==last else
           'PAUSED · Use Next to follow changes')+'</span></div>',unsafe_allow_html=True)
     # Separate view/presentation time from original recorded trace time; seek uses
     # saved timestamps only, and never fabricates an intermediate runtime marker.
@@ -1315,6 +1323,7 @@ def sync_scenario_picker(widget_key):
 
 st.sidebar.markdown('### ◈ TEAD AI')
 st.sidebar.caption('Agentic Telecom Network Investigation & RCA')
+st.sidebar.caption(f'{RELEASE_VERSION} · build {release_build_id()} · {RELEASE_DATE}')
 st.sidebar.divider()
 if 'requested_page' in st.session_state:
     st.session_state['nav_page']=st.session_state.pop('requested_page')
@@ -1323,7 +1332,7 @@ if st.session_state.get('selected_scenario') not in _valid_scenarios:
 if 'nav_page' not in st.session_state:
     st.session_state['nav_page']='Platform Overview'
 page=st.sidebar.radio('Workspace',PAGES,key='nav_page')
-opts={x:next(c['title'] for c in manifest['cases'] if c['scenario_id']==x) for x in _valid_scenarios}
+opts={x:f"{x} · {next(c['title'] for c in manifest['cases'] if c['scenario_id']==x)}" for x in _valid_scenarios}
 sync_scenario_picker('sidebar_scenario_picker')
 st.sidebar.selectbox('Select scenario ▾',options=_valid_scenarios,format_func=lambda x:opts[x],
                      key='sidebar_scenario_picker',on_change=sync_scenario_from,args=('sidebar_scenario_picker',))
@@ -1339,11 +1348,12 @@ if page!='Guided Operations Demo':
 
 if page=='Platform Overview':
  heading('Discover TEAD AI','Evidence-grounded investigation and RCA in under five minutes — using recorded synthetic 5G experiments, not live production data.')
+ if st.button('▶ Watch the investigation',type='primary',use_container_width=True):
+  st.session_state['requested_page']='Guided Operations Demo';st.rerun()
  render_solution_intro([load_case(x) for x in manifest['scenario_order']],include_architecture=False)
  st.markdown('### Choose your experience')
  st.write('Follow the Network Health & Localisation Agent through its two ML predictions, network telemetry, specialist analysis, knowledge-grounded reasoning and final RCA. Pause anywhere to inspect the original evidence.')
- if st.button('▶ Watch the investigation',type='primary',use_container_width=True):
-  st.session_state['requested_page']='Guided Operations Demo';st.rerun()
+ st.caption('The demo opens in a separate narrated view; all interactions replay saved recordings.')
  st.divider()
  render_investigation_flow()
  st.divider()
@@ -1624,24 +1634,43 @@ elif page=='Engineering Evidence':
       gs=groups
      names=[]
      for i,g in enumerate(gs):
-      s=g.get('static') or {};names.append((f"{s.get('entity_id','object')} | 5QI {s.get('five_qi','—')} | {s.get('operational_category','')}",i))
-     chosen=st.selectbox('Entity / recorded series',names,format_func=lambda z:z[0])
-     g=gs[chosen[1]];static=g.get('static') or {};series=g.get('series') or {}
-     nrows=len(g.get('timestamps') or []);df=pd.DataFrame({'interval_start_utc':g['timestamps']})
-     for k,v in series.items():
-      if isinstance(v,list) and len(v)==nrows and (k.startswith('value_') or k in ['partial_drb_accessibility_pct','total_drb_accessibility_pct']):df[k]=v
-     for k in ['value_float','value_int','value_bool','value_text']:
-      if k not in df and static.get(k) is not None:df[k]=[static[k]]*nrows
+      static=g.get('static') or {}
+      labels=[f"{static.get('entity_id','object')}"]
+      if static.get('operational_category'):labels.append(str(static['operational_category']))
+      labels.append(f"source group {i+1}")
+      names.append((' · '.join(labels),i))
+     chosen=st.selectbox('Entity / recorded group',names,format_func=lambda z:z[0])
+     g=gs[chosen[1]];static=g.get('static') or {}
+     try:
+      raw_df, partitions=partition_measurements(g)
+     except ValueError as exc:
+      st.error('Recorded group schema is not chart-safe: '+str(exc))
+      st.stop()
+     # Select a complete per-row dimensional identity, rather than assuming
+     # every row in one encoded group belongs to a single continuous series.
+     if not partitions:
+      st.info('No recorded observations in the selected measurement group.')
+      st.stop()
+     options=list(range(len(partitions)))
+     index=st.selectbox('Recorded series dimensions',options,format_func=lambda i:partitions[i]['label'])
+     part=partitions[index]
+     df=part['frame'].copy()
+     st.caption(f"{part['label']} · {len(df)} original observations · {len(partitions)} distinct source series in this group. Dimensions come from recorded per-row columns.")
      quantitative=[k for k in ['value_float','value_int','value_bool','partial_drb_accessibility_pct','total_drb_accessibility_pct'] if k in df and pd.to_numeric(df[k],errors='coerce').notna().any()]
-     if quantitative:
+     if not part['safe_to_plot']:
+      st.warning('Chart suppressed: more than one observation shares the same timestamp and full recorded dimensional identity. Source rows remain available for review; no aggregation or arbitrary line joining is performed.')
+     elif quantitative:
       metric_value=st.selectbox('Value column',quantitative)
-      df[metric_value]=pd.to_numeric(df[metric_value],errors='coerce')
-      fig=go.Figure(go.Scatter(x=pd.to_datetime(df['interval_start_utc'],utc=True),y=df[metric_value],mode='lines+markers'))
-      fig.update_layout(height=310,template='plotly_white',margin={'l':10,'r':10,'b':10,'t':15},yaxis_title=static.get('unit') or metric_value,xaxis_title='UTC')
+      plot_values=pd.to_numeric(df[metric_value],errors='coerce')
+      fig=go.Figure(go.Scatter(x=pd.to_datetime(df['interval_start_utc'],utc=True),y=plot_values,
+                              mode='lines+markers',name=part['label']))
+      fig.update_layout(height=310,template='plotly_white',margin={'l':10,'r':10,'b':10,'t':15},
+                        yaxis_title=static.get('unit') or metric_value,xaxis_title='UTC')
       st.plotly_chart(fig,use_container_width=True)
-     else:st.info('State/categorical telemetry; source values shown in the table.')
+     else:
+      st.info('State/categorical telemetry; source values shown in the table.')
      st.dataframe(df,hide_index=True,use_container_width=True)
-     st.caption(f"Source: {selected['evidence_id']} · {x.get('representation','recorded data')} · {x.get('source_row_count','—')} source rows · {len(groups)} groups.")
+     st.caption(f"Source: {selected['evidence_id']} · {x.get('representation','recorded data')} · {x.get('source_row_count','—')} source rows · {len(groups)} groups. No rows or dimensions were discarded or silently aggregated.")
      with st.expander('Recorded entity metadata'):st.json(static,expanded=False)
    else:
     st.caption('The selected tool returned structured recorded evidence rather than a columnar time series.')
@@ -1664,7 +1693,7 @@ elif page=='Evaluation & Performance':
  nodes=pd.DataFrame(c['observed_nodes'])
  x=nodes[(nodes['depth']==0) | (nodes['name'].isin(['SP01','SP02','SP03','SP04','SP05','SP06','SP07','SP08','SUPERVISOR']))]
  st.dataframe(x[['name','run_type','start_time','end_time','duration_seconds','total_tokens','total_cost']],hide_index=True,use_container_width=True)
- st.caption('Token and cost fields in the export are not reliable proof of original inference usage or zero cost. Treat missing/zero accounting as unavailable unless independently reconciled.')
+ st.caption('Token and cost fields in the export are not reliable proof of original inference usage or zero cost. Treat missing/zero accounting as unavailable unless independently reconciled. Post-run exact-match and judge scores are reported from notebook exports; field-level comparison records and full judging rubric are not in this public replay, so displayed percentages are not independently reproducible here.')
  tokens=pd.to_numeric(nodes.loc[nodes['run_type']=='llm','total_tokens'],errors='coerce').dropna()
  if len(tokens):st.caption(f"Summed reported tokens across LLM node records (not a billing estimate): {int(tokens.sum()):,}.")
  else:st.caption('No complete per-LLM token counts were recorded in exported child nodes. No synthetic usage estimate is shown.')

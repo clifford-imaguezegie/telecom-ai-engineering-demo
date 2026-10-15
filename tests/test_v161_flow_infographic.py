@@ -38,7 +38,7 @@ def test_flow_is_presentational_not_live(monkeypatch):
     f=flow_only(render(monkeypatch))
     assert 'not live inference' in f
     assert 'Nothing on this page invokes a live agent' in f
-    assert '15-minute observation window' in f
+    assert 'PM and event telemetry across the scenario observation window' in f
     assert 'RAG support' in f
     assert 'post-run evaluation' in f
     assert 'not extra execution stages' in f
