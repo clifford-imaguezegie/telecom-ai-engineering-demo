@@ -1,8 +1,8 @@
 """Traceable public UI release identity, separate from recorded trace IDs."""
 from hashlib import sha256
 from pathlib import Path
-RELEASE_VERSION = 'V1.7.5 RC2'
-RELEASE_DATE = '15 Oct 2026'
+RELEASE_VERSION = 'V1.7.5 RC2.1'
+RELEASE_DATE = '16 Oct 2026'
 RELEASE_FILES = ('app.py','guided_story_ui.py','operational_demo.py',
                  'measurement_series.py','network_overview.py','value_solutions.py')
 

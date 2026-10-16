@@ -1082,6 +1082,27 @@ def _restart_guided_player(player_key):
     }
 
 
+def _activate_guided_context(selected_sid, player_sid, include_healthy, executive):
+    """A newly selected Guided journey starts Ready, even if previously visited.
+
+    Player state is keyed by recording and viewing mode so normal rerenders and
+    visits to other application pages can preserve a paused presentation. The
+    old behaviour also reused *stale* scene positions when visitors changed
+    scenario or presentation and returned to a prior recording. Detect a real
+    selection-context transition before mounting the player fragment and reset
+    the destination's cached player with the existing generation-safe Restart
+    operation. This also protects against late events from its retired slider.
+    """
+    context = (selected_sid, player_sid, bool(include_healthy), bool(executive))
+    previous = st.session_state.get('ops_guided_active_context')
+    if previous is not None and previous != context:
+        key = ('ops_player_' + player_sid + '_' + str(include_healthy)
+               + ('_executive' if executive else ''))
+        if key in st.session_state:
+            _restart_guided_player(key)
+    st.session_state['ops_guided_active_context'] = context
+
+
 @st.fragment(run_every='1s')
 def guided_operations_player(selected_sid, include_healthy, executive=False):
     """V1.7.0 staged story of independent saved traces, not a live network simulation.
@@ -1460,7 +1481,10 @@ elif page=='Guided Operations Demo':
   st.caption('**Selected synthetic incident: '+main_sid+'.** Follow only this recorded case. The four evidence tiles begin empty and reveal results in source order.')
  st.info('Explore a different recorded investigation with **Select scenario ▾** in the left sidebar. The replay will use that scenario’s original saved evidence and RCA; no live investigation is started.')
  player_sid='M05I0017' if mode=='Healthy control only' else main_sid
- guided_operations_player(player_sid,mode=='Healthy control only' or mode.startswith('Compare'),executive=experience.startswith('Executive'))
+ include_healthy=mode=='Healthy control only' or mode.startswith('Compare')
+ executive=experience.startswith('Executive')
+ _activate_guided_context(sid,player_sid,include_healthy,executive)
+ guided_operations_player(player_sid,include_healthy,executive=executive)
  with st.expander('About this demonstration and next steps',expanded=False):
   render_value_proposition()
   st.markdown('Open **Agentic Replay** for every recorded call, **Engineering Evidence** for KPI series, **Root Cause Analysis** for diagnosis or **Evaluation & Performance** for trace measurements.')

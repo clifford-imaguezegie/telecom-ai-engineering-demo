@@ -15,7 +15,7 @@ from release_identity import RELEASE_VERSION
 
 def test_new_release_version_and_navigation_hooks():
     text = (ROOT/'app.py').read_text('utf-8')
-    assert RELEASE_VERSION == 'V1.7.5 RC2'
+    assert RELEASE_VERSION == 'V1.7.5 RC2.1'
     assert "on_click=_restart_guided_player,args=(key,)" in text
     assert "st.rerun()" in text
     assert "on_change=_workspace_changed" in text
