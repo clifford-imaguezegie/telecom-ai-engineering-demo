@@ -92,7 +92,7 @@ def test_release_source_exposes_traceable_identity_and_correct_pm_scope():
     assert 'COMPLETED · Select Restart' in app
     assert "opts={x:f\"{x}" in app
     assert 'release_build_id()' in app
-    assert RELEASE_VERSION=='V1.7.5 RC2.1'
+    assert RELEASE_VERSION=='V1.7.5 RC2.2'
     assert re.fullmatch(r'[0-9a-f]{12}',release_build_id())
     assert 'field-level comparison records and full judging rubric are not in this public replay' in app
 

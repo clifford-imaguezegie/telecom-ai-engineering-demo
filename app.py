@@ -17,6 +17,7 @@ from network_overview import derive_inventory, observed_tools, topology_html, to
 from value_solutions import render_page as render_value_solutions_page
 from measurement_series import partition_measurements
 from release_identity import release_build_id, RELEASE_VERSION, RELEASE_DATE
+from terminology import render_page_terms, render_sidebar_glossary
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -1405,7 +1406,7 @@ def sync_scenario_picker(widget_key):
         st.session_state[widget_key]=canonical
 
 st.sidebar.markdown('### ◈ TEAD AI')
-st.sidebar.caption('Agentic Telecom Network Investigation & RCA')
+st.sidebar.caption('Agentic Telecom Network Investigation & Root Cause Analysis (RCA)')
 st.sidebar.caption(f'{RELEASE_VERSION} · build {release_build_id()} · {RELEASE_DATE}')
 st.sidebar.divider()
 if 'requested_page' in st.session_state:
@@ -1423,16 +1424,20 @@ opts={x:f"{x} · {next(c['title'] for c in manifest['cases'] if c['scenario_id']
 sync_scenario_picker('sidebar_scenario_picker')
 st.sidebar.selectbox('Select scenario ▾',options=_valid_scenarios,format_func=lambda x:opts[x],
                      key='sidebar_scenario_picker',on_change=sync_scenario_from,args=('sidebar_scenario_picker',))
+render_sidebar_glossary(st)
 sid=st.session_state['selected_scenario']
 c=load_case(sid)
 _restore_destination_context()
 st.sidebar.divider()
 st.sidebar.caption('RECORDED INVESTIGATION DEMO')
-st.sidebar.caption('No live agent, telemetry, LLM, API key or paid inference calls.')
+st.sidebar.caption('No live agents, telemetry, Large Language Model (LLM) calls, Application Programming Interface (API) keys or paid inference.')
 st.sidebar.caption('Synthetic experimental network • not production operations')
 
 if page!='Guided Operations Demo':
- st.markdown(f'''<div class="hero"><div class="eyebrow">TEAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TEAD AI — Agentic Telecom Network Investigation &amp; RCA Platform</h1><div class="sub">ML-assisted network assessment · Multi-agent engineering investigation · Evidence-grounded root cause analysis</div></div>''',unsafe_allow_html=True)
+ st.markdown(f'''<div class="hero"><div class="eyebrow">TEAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TEAD AI — Agentic Telecom Network Investigation &amp; Root Cause Analysis (RCA) Platform</h1><div class="sub">Machine Learning (ML)-assisted network assessment · Multi-agent engineering investigation · Evidence-grounded RCA</div></div>''',unsafe_allow_html=True)
+
+if page!='Guided Operations Demo':
+ render_page_terms(st,page)
 
 if page=='Platform Overview':
  heading('Discover TEAD AI','Evidence-grounded investigation and RCA in under five minutes — using recorded synthetic 5G experiments, not live production data.')
@@ -1462,8 +1467,9 @@ elif page=='Value Proposition & Solutions':
 
 elif page=='Guided Operations Demo':
  st.markdown('<span class="tread-guided-marker" aria-hidden="true"></span><div class="cockpit-kicker">TEAD AI · AGENTIC NETWORK INVESTIGATION</div><div class="cockpit-heading">Guided Operations Demo</div>',unsafe_allow_html=True)
+ render_page_terms(st,page)
  main_sid=sid if sid!='M05I0017' else 'M05I0003'
- st.markdown('<div class="gs-intro">Follow one recorded 5G investigation from SP01 network assessment through evidence arrival, conditional routing, specialist analysis and Supervisor RCA. <b>Nothing updates until you press Play or Next.</b></div>',unsafe_allow_html=True)
+ st.markdown('<div class="gs-intro">Follow one recorded fifth-generation (5G) network investigation from SP01 (Network Health & Localisation) through evidence arrival, conditional routing, specialist analysis and Supervisor Root Cause Analysis (RCA). <b>Nothing updates until you press Play or Next.</b></div>',unsafe_allow_html=True)
  mode_col,scene_col=st.columns([1,1],gap='small')
  with mode_col:
   experience=st.radio('Visitor experience',['Executive overview (key scenes)','Full engineering replay'],horizontal=True)
@@ -1487,7 +1493,7 @@ elif page=='Guided Operations Demo':
  guided_operations_player(player_sid,include_healthy,executive=executive)
  with st.expander('About this demonstration and next steps',expanded=False):
   render_value_proposition()
-  st.markdown('Open **Agentic Replay** for every recorded call, **Engineering Evidence** for KPI series, **Root Cause Analysis** for diagnosis or **Evaluation & Performance** for trace measurements.')
+  st.markdown('Open **Agentic Replay** for every recorded call, **Engineering Evidence** for Key Performance Indicator (KPI) series, **Root Cause Analysis** for diagnosis or **Evaluation & Performance** for trace measurements.')
 
 elif page=='Network Overview':
  heading('Synthetic 5G Network Overview','The network model, its evidence sources and the agent/tool capabilities used in our recorded experiments. Detailed individual incident findings are in Scenario Library.')
