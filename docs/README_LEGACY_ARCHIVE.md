@@ -10,7 +10,7 @@
 
 # TEAD AI V1.6.2 — Single-Frame Architecture Overview
 
-**Latest presentation refinement.** Platform Overview now leads with a compact connected architecture map that keeps SP01, intelligent routing, three alternative investigation paths, Supervisor evidence synthesis and final RCA visible in one 1366×768 laptop component viewport after navigating to the architecture section. The original detailed V1.6.1 diagram is **preserved in an expander**, rather than removed. The value proposition, observed timing ranges, network and engineering learnings, legacy technical explanation, eight pages, unified investigation cockpit and all recorded source data remain intact. See [`V1_6_2_RELEASE_NOTES.md`](V1_6_2_RELEASE_NOTES.md) for QA boundaries and deployment steps. Local component checks are **not** a live Streamlit browser acceptance certification.
+**Latest presentation refinement.** Platform Overview now leads with a compact connected architecture map that keeps SP01, intelligent routing, three alternative investigation paths, Supervisor evidence synthesis and final RCA visible in one 1366×768 laptop component viewport after navigating to the architecture section. The original detailed V1.6.1 diagram is **preserved in an expander**, rather than removed. The value proposition, observed timing ranges, network and engineering learnings, legacy technical explanation, eight pages, unified investigation cockpit and all recorded source data remain intact. See [`V1_6_2_RELEASE_NOTES.md`](releases/V1_6_2_RELEASE_NOTES.md) for QA boundaries and deployment steps. Local component checks are **not** a live Streamlit browser acceptance certification.
 
 # TEAD AI V1.6.1 — Connected Conditional Investigation Flow
 
@@ -40,7 +40,7 @@ The viewer can still choose Executive / Full Engineering and Healthy → Inciden
 - Mobile-focused workflow cards use compact role names for legibility without discarding full accessible roles; frame height and native auto-sized full-route panels remain unchanged.
 - The CU-processing and congestion RCA summaries now contain concise qualifications of the **recorded** causal and ML-confidence language; source evidence is not edited.
 - **211 local automated tests** passed, including event-simulation regressions for seek after Restart. Twelve Chromium **component-only** checks at exact requested viewport sizes passed. These results do **not** replace live Streamlit acceptance or resolve the independent reviewer’s provisional release hold by themselves.
-- See [`V1_4_3_RELEASE_NOTES.md`](V1_4_3_RELEASE_NOTES.md) for the precise diagnosis, test limits, deployment and acceptance procedure.
+- See [`V1_4_3_RELEASE_NOTES.md`](releases/V1_4_3_RELEASE_NOTES.md) for the precise diagnosis, test limits, deployment and acceptance procedure.
 
 ## V1.4 — External visitor experience and recorded-execution integrity
 
