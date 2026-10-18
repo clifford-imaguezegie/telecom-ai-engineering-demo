@@ -18,6 +18,7 @@ from value_solutions import render_page as render_value_solutions_page
 from measurement_series import partition_measurements
 from release_identity import release_build_id, RELEASE_VERSION, RELEASE_DATE
 from terminology import render_page_terms, render_sidebar_glossary
+from observatory_experience import OBSERVATORY_CSS, render_observatory_home
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -33,7 +34,7 @@ BASE = Path(__file__).resolve().parent
 DATA = BASE / 'data'
 PAGES = ['Platform Overview','Value Proposition & Solutions','Guided Operations Demo','Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
 
-st.set_page_config(page_title='TEAD AI | Telecom Investigation & RCA',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
+st.set_page_config(page_title='TEAD AI | Network Observatory',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
 st.markdown('''<style>
 .block-container {padding-top:1.5rem;padding-bottom:3rem;max-width:1500px}
 [data-testid="stSidebar"]{background:#101e30}
@@ -402,6 +403,9 @@ h1,h2,h3{letter-spacing:-.025em}
 .gs-focus-final .gs-result p{font-size:.92rem;line-height:1.5}
 @media(max-width:720px){.gs-timeline-stats{display:grid;grid-template-columns:1fr 1fr}.gs-timeline-stats span:last-child{grid-column:1/-1}.gs-rca-board .gs-evidence{min-height:155px;max-height:none;height:auto}}
 </style>''',unsafe_allow_html=True)
+
+# Presentation-only layer; all recorded evidence and model logic remain unchanged.
+st.markdown(OBSERVATORY_CSS,unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False)
 def load_manifest():
@@ -1405,7 +1409,8 @@ def sync_scenario_picker(widget_key):
     if st.session_state.get(widget_key)!=canonical:
         st.session_state[widget_key]=canonical
 
-st.sidebar.markdown('### ◈ TEAD AI')
+st.sidebar.markdown('### ◈ TEAD AI / OBSERVATORY')
+st.sidebar.caption('Network Observatory · UX preview; experimental evidence unchanged')
 st.sidebar.caption('Agentic Telecom Network Investigation & Root Cause Analysis (RCA)')
 st.sidebar.caption(f'{RELEASE_VERSION} · build {release_build_id()} · {RELEASE_DATE}')
 st.sidebar.divider()
@@ -1433,34 +1438,43 @@ st.sidebar.caption('RECORDED INVESTIGATION DEMO')
 st.sidebar.caption('No live agents, telemetry, Large Language Model (LLM) calls, Application Programming Interface (API) keys or paid inference.')
 st.sidebar.caption('Synthetic experimental network • not production operations')
 
-if page!='Guided Operations Demo':
- st.markdown(f'''<div class="hero"><div class="eyebrow">TEAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TEAD AI — Agentic Telecom Network Investigation &amp; Root Cause Analysis (RCA) Platform</h1><div class="sub">Machine Learning (ML)-assisted network assessment · Multi-agent engineering investigation · Evidence-grounded RCA</div></div>''',unsafe_allow_html=True)
+if page not in ('Guided Operations Demo','Platform Overview'):
+ st.markdown(f'''<div class="hero"><div class="eyebrow">TEAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TEAD AI — Network Investigation Observatory</h1><div class="sub">Machine Learning (ML)-assisted network assessment · Multi-agent engineering investigation · Evidence-grounded RCA</div></div>''',unsafe_allow_html=True)
 
 if page!='Guided Operations Demo':
  render_page_terms(st,page)
 
 if page=='Platform Overview':
- heading('Discover TEAD AI','Evidence-grounded investigation and RCA in under five minutes — using recorded synthetic 5G experiments, not live production data.')
- if st.button('▶ Watch the investigation',type='primary',use_container_width=True):
-  st.session_state['requested_page']='Guided Operations Demo';st.rerun()
- render_solution_intro([load_case(x) for x in manifest['scenario_order']],include_architecture=False)
- st.markdown('### Choose your experience')
- st.write('Follow the Network Health & Localisation Agent through its two ML predictions, network telemetry, specialist analysis, knowledge-grounded reasoning and final RCA. Pause anywhere to inspect the original evidence.')
- st.caption('The demo opens in a separate narrated view; all interactions replay saved recordings.')
- st.divider()
- render_investigation_flow()
- st.divider()
- render_execution_performance([load_case(x) for x in manifest['scenario_order']])
- st.divider()
- render_platform_learnings()
- st.divider()
- render_engineering_learnings()
- st.divider()
- with st.expander('Detailed Architecture — original technical explanation (preserved)',expanded=False):
+ # The visitor journey is presentation only. It does not change replay data.
+ intro_cases=[load_case(x) for x in manifest['scenario_order']]
+ render_observatory_home(st,intro_cases)
+ st.subheader('Choose your experience')
+ st.caption('Follow a real recorded scenario in plain English, watch specialist handovers, or inspect the supporting engineering evidence.')
+ b1,b2,b3=st.columns(3,gap='small')
+ with b1:
+  if st.button('▶ Watch the investigation',key='obs_watch',type='primary',use_container_width=True):
+   st.session_state['selected_scenario']='M05I0003'
+   st.session_state['requested_page']='Guided Operations Demo';st.rerun()
+ with b2:
+  if st.button('Explore the agent handovers →',key='obs_agents',use_container_width=True):
+   st.session_state['selected_scenario']='M05I0005'
+   st.session_state['requested_page']='Agentic Replay';st.rerun()
+ with b3:
+  if st.button('Inspect an evidence-backed RCA →',key='obs_rca',use_container_width=True):
+   st.session_state['selected_scenario']='M05I0003'
+   st.session_state['requested_page']='Root Cause Analysis';st.rerun()
+ st.caption('The three shortcuts open completed recordings. They do not run live analysis or trigger network changes.')
+ with st.expander('Measured milestones and detailed conditional architecture',expanded=False):
+  heading('Discover TEAD AI','Evidence-grounded investigation and RCA in under five minutes — using recorded synthetic 5G experiments, not live production data.')
+  render_solution_intro(intro_cases,include_architecture=False)
+  render_investigation_flow()
+  render_execution_performance(intro_cases)
+ with st.expander('Engineering learnings, full architecture and limitations',expanded=False):
+  render_platform_learnings()
+  render_engineering_learnings()
   architecture_diagram()
- st.divider()
- render_value_proposition()
- st.caption('Future development: live adapters, operational resilience, measured inference economics, evidence sufficiency and policy-bounded actions require separate testing before production claims.')
+  render_value_proposition()
+  st.caption('Future development: live adapters, operational resilience, measured inference economics, evidence sufficiency and policy-bounded actions require separate testing before production claims.')
 
 elif page=='Value Proposition & Solutions':
  render_value_solutions_page(st, [load_case(x) for x in manifest['scenario_order']])
