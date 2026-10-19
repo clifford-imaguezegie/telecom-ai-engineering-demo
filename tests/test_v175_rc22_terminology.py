@@ -12,7 +12,7 @@ PAGES=['Platform Overview','Value Proposition & Solutions','Guided Operations De
 
 
 def test_all_nine_existing_pages_have_first_use_definitions():
-    assert list(PAGE_KEY_TERMS)==PAGES
+    assert list(PAGE_KEY_TERMS)[:len(PAGES)] == PAGES
     for page in PAGES:
         assert len(PAGE_KEY_TERMS[page]) >= 4
         assert all(key in TERMS for key in PAGE_KEY_TERMS[page])

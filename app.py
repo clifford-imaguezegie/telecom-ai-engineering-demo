@@ -1516,19 +1516,23 @@ def _tc_legacy_rca():
 
 
 def _tc_legacy_engineering():
+ focus=st.session_state.get('tead_evidence_focus') or {}
+ if focus.get('scenario_id')!=sid:focus={}
  heading('Engineering Evidence Explorer','Review the source measurements that the completed investigation consulted. Values are preserved from the LangSmith tool outputs.')
+ if focus.get('entity_id'):
+  st.info('Case-linked accessibility evidence: selected cell '+str(focus['entity_id'])+'. Preserve the original 5QI dimension when inspecting the chart.')
  tab1,tab2,tab3=st.tabs(['Accessibility KPIs','Operational measurements','Evidence provenance'])
  with tab1:
   n=query_network(c)
-  granularity=st.radio('Granularity',['Subnetwork (5QI)','NRCellDU/CU object (5QI)'],horizontal=True)
-  metric=st.selectbox('Accessibility KPI',['partial_drb_accessibility_pct','total_drb_accessibility_pct'],format_func=lambda x:x.replace('_',' ').title())
+  granularity=st.radio('Granularity',['Subnetwork (5QI)','NRCellDU/CU object (5QI)'],horizontal=True,index=1 if focus.get('entity_id') else 0)
+  metric=st.selectbox('Accessibility KPI',['partial_drb_accessibility_pct','total_drb_accessibility_pct'],format_func=lambda x:x.replace('_',' ').title(),index=0)
   if granularity=='Subnetwork (5QI)':network_chart(c,metric)
   else:
    x=n.get('cell_kpis',{}); groups=x.get('groups',[]) if isinstance(x,dict) else []
    ids=sorted({g.get('static',{}).get('entity_id') for g in groups if g.get('static',{}).get('entity_id')})
    if ids:
     target=c['stage_data']['supervisor_output'].get('target_cells') or []
-    preferred=target[0].get('nr_cell_cu_id') if target and isinstance(target[0],dict) else None
+    preferred=(focus.get('entity_id') or (target[0].get('nr_cell_cu_id') if target and isinstance(target[0],dict) else None))
     sel=st.selectbox('NR CU cell',ids,index=ids.index(preferred) if preferred in ids else 0)
     qivals=sorted({g.get('static',{}).get('five_qi') for g in groups if g.get('static',{}).get('entity_id')==sel})
     qi=st.selectbox('5QI',qivals)
@@ -1693,9 +1697,10 @@ def sync_scenario_picker(widget_key):
         st.session_state[widget_key]=canonical
 
 st.sidebar.markdown('### ◈ TEAD AI')
-st.sidebar.caption('Agentic Network Investigation & RCA · Connected Agent UX preview')
+st.sidebar.caption('TEAD AI · 5G RAN engineering demonstration')
 st.sidebar.caption('Agentic Telecom Network Investigation & Root Cause Analysis (RCA)')
 st.sidebar.caption(f'{RELEASE_VERSION} · build {release_build_id()} · {RELEASE_DATE}')
+st.sidebar.caption(f'Interface Candidate 4.2 · UI build {ref.ui_build_id()}')
 st.sidebar.divider()
 if 'requested_page' in st.session_state:
     requested = st.session_state.pop('requested_page')
@@ -1793,11 +1798,15 @@ elif page=='Evidence Room':
  ref.evidence_intro(st)
  st.markdown(_ref_evidence_banner(c),unsafe_allow_html=True)
  evidence_view=st.radio('Choose evidence view',['RCA & diagnosis','Network measurements & provenance'],horizontal=True,key='tc_evidence_view')
- if evidence_view=='RCA & diagnosis':_tc_legacy_rca()
+ if evidence_view=='RCA & diagnosis':
+  _tc_legacy_rca()
+  note=ref.causal_interpretation(c)
+  if note:st.info(note)
  else:_tc_legacy_engineering()
 
 elif page=='Results':
- # TEAD_CANDIDATE4_1_TRACE_FAITHFUL_COPY — presentation-only results wiring
+ # TEAD_CANDIDATE4_1_TRACE_FAITHFUL_COPY — preserved Results wiring
+ # TEAD_CANDIDATE4_2_CONSOLIDATED — consolidated presentation update
  ref.results_intro(st,[load_case(x) for x in manifest['scenario_order']])
  render_execution_performance([load_case(x) for x in manifest['scenario_order']])
  with st.expander('Original trace measurements, post-run evaluations and provenance',expanded=False):
@@ -1868,42 +1877,6 @@ elif page=='Guided Operations Demo':
  with st.expander('About this demonstration and next steps',expanded=False):
   render_value_proposition()
   st.markdown('Open **Agentic Replay** for every recorded call, **Engineering Evidence** for Key Performance Indicator (KPI) series, **Root Cause Analysis** for diagnosis or **Evaluation & Performance** for trace measurements.')
-
-elif page=='Network Overview':
- heading('Synthetic 5G Network Overview','The network model, its evidence sources and the agent/tool capabilities used in our recorded experiments. Detailed individual incident findings are in Scenario Library.')
- # All nine selected recordings carry identical topology inventories. Read the
- # first source directly, rather than inventing site, DU, CU or NR-cell IDs.
- reference_id=manifest['scenario_order'][0]
- reference_case=load_case(reference_id)
- topology_ref=evidence_by_tool(reference_case,'telemetry_topology')
- reference_entities=(load_evidence(reference_id,topology_ref['evidence_id'])['result'].get('entities') or []) if topology_ref else []
- inventory=derive_inventory(reference_entities)
- st.markdown(NETWORK_STYLE,unsafe_allow_html=True)
- st.subheader('Recorded Network Topology')
- st.caption('Ten modeled gNodeB sites, three logical NR cells per site, and shared CU-domain context. Object identities and logical relationships below come from the recorded topology service.')
- st.markdown(topology_html(inventory),unsafe_allow_html=True)
- st.caption('The nine scenarios represent independent synthetic network snapshots sharing this topology inventory. PM refers to performance-management telemetry; the reporting interval is documented in Engineering Evidence and source metadata.')
- st.divider()
- heading('Investigation evidence sources','Recorded PM and event telemetry, topology, radio, processing, transport and configuration observations are combined with supporting ML outputs and curated domain knowledge.')
- feeds=[
-  ('Network & PM evidence','Accessibility KPIs · Network state · Cell and peer measurements'),
-  ('Radio & resources','Radio state · Resource utilisation · Processing telemetry'),
-  ('Transport & configuration','Transport interfaces · Configuration state · CU-domain/boundary state'),
-  ('ML & domain knowledge','Fault family · Affected scope · Feature drivers · Curated telecom knowledge retrieval'),
- ]
- feed_html='<div class="ops-architecture">'+''.join(f'<div class="step"><strong>{escape(title)}</strong><span>{escape(desc)}</span></div>' for title,desc in feeds)+'</div>'
- st.markdown(feed_html,unsafe_allow_html=True)
- st.divider()
- heading('Agent and Tool Capability Map','Each agent is shown with evidence tools actually observed across the nine recorded experiments. This is a logical architecture overview, not live execution or a disclosure of private prompts.')
- recorded_cases=[load_case(x) for x in manifest['scenario_order']]
- toolmap=observed_tools(recorded_cases)
- st.markdown(tools_html(toolmap),unsafe_allow_html=True)
- st.caption('SP01 selects the investigation route. Cell/site incidents use SP02–SP07 sequentially, CU-domain cases use SP08 instead, and healthy cases go directly to Supervisor review. Not every agent or tool is invoked in every scenario.')
- with st.expander('Exact recorded agent → tool identifiers and provenance',expanded=False):
-  rows=[{'Agent':a,'Role':AGENT_ROLES[a][0], 'Observed tool ID':t,'Visitor label':TOOL_NAMES.get(t,t)} for a, names in toolmap.items() for t in names]
-  st.dataframe(pd.DataFrame(rows),hide_index=True,use_container_width=True)
-  st.caption('Observed tool IDs originate from the nine frozen evidence indexes. Raw curated knowledge passages, model prompts and credentials are not distributed. For exact tool inputs/outputs, use Agentic Replay and Engineering Evidence.')
- st.info('Next: open **Case Stories** to understand an incident, **Agent Flow** to watch the actual handovers, or **Evidence Room** for recorded measurements and RCA.')
 
 elif page=='Scenario Library':
  heading('Scenario Library','Choose one of the nine completed LangSmith investigations. All incident classifications below come from recorded Supervisor outputs.')

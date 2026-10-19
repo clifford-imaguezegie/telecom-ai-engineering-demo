@@ -1,12 +1,12 @@
-"""TEAD AI — E/C reference experience; presentation only, trace-grounded.
+"""TEAD AI visitor experience — Candidate 4.2; evidence-grounded replay.
 
-This deliberate intermediate preview adopts E/C's plum/coral/cream palette,
-page narrative, story layout, and trace-flow layout. No inference, tool calls,
-network actions, or changes to original case or evaluation payloads.
+Preserves the accepted seven-page presentation, recorded investigation routes,
+and frozen experimental evidence without executing network actions or models.
 """
 from __future__ import annotations
 
 from html import escape
+import re
 from pathlib import Path
 import json
 
@@ -60,6 +60,7 @@ EXTRAS='''<style>
 .ec-ref-flow .panel + .panel{border-left:1px solid #e9d8cb;background:#fff}
 .ec-ref-flow .kicker{color:#a4554b;font-size:10px;letter-spacing:.15em;font-weight:850;margin-bottom:8px}
 .ec-ref-flow .out-title{font-size:17px;font-weight:800;margin-bottom:7px;color:#38223f}
+.ec-ref-flow .stage-time{font-size:12px;font-weight:750;color:#A4554B;margin:0 0 10px}
 .ec-ref-flow .out-line{font-size:13px;color:#4f4052;line-height:1.55;max-height:106px;overflow-y:auto}
 .ec-ref-flow .evidence-note{font-size:12px;line-height:1.5;background:#fff1e7;border-left:3px solid #df795b;padding:8px 10px;margin-top:11px;max-height:135px;overflow-y:auto}
 .ec-ref-flow .history{max-height:178px;overflow-y:auto;font-size:12px;line-height:1.5;color:#655568}
@@ -171,7 +172,7 @@ def challenge(st,cases):
     loc_label='< 25 sec' if len(loc_samples)==len(incident_rows) and loc_samples and max(loc_samples)<25 else (format_duration(max(loc_samples)) if loc_samples else '—')
     rca_label='< 5 min' if rca_samples and max(rca_samples)<300 else (format_duration(max(rca_samples)) if rca_samples else '—')
     metrics=[(loc_label,'Fault localisation','SP01 · '+str(len(loc_samples))+'/'+str(len(incident_rows))+' incident runs'),
-             (rca_label,'Root cause identified','Completed end-to-end RCA · '+str(len(rca_samples))+' incidents'),
+             (rca_label,'Root-cause assessment completed','Completed end-to-end RCA · '+str(len(rca_samples))+' incidents'),
              (str(len(cases)),'Completed investigations','Eight incident cases + one healthy control'),
              ('10 / 30','5G RAN sites / cells','Two recorded CU domains')]
     cols=st.columns(4,gap='small')
@@ -180,6 +181,10 @@ def challenge(st,cases):
     st.caption('Times come from the saved LangSmith executions: localisation uses the SP01 chain duration; RCA time is the full elapsed investigation through its recorded outcome. The values are experimental measurements, not production MTTR.')
     st.markdown('<div class="feature"><strong>Start with the SITE_008 investigation:</strong> Accessibility deteriorates across three radio cells. Is this radio-resource congestion, a different radio impairment or a problem elsewhere in the network? Follow the recorded sequence from localisation to specialist assessment and the final evidence-grounded RCA. Then compare with the CU-processing case to see how the agent route changes.</div>',unsafe_allow_html=True)
     boundary(st)
+    with st.expander('Where the investigation approach could add operator value',expanded=False):
+        st.markdown('**Demonstrated today:** ML-assisted localisation, conditional 5G RAN investigation, recorded specialist evidence and Supervisor RCA across the nine saved experiments.')
+        st.markdown('**Operator applications requiring adaptation:** historical incident investigation on operator PM/events/topology, assisted NOC ticket handover, and configuration/change assurance. Each requires approved evidence connections, vendor-specific counter mapping, private inference and independent evaluation.')
+        st.markdown('**Further roadmap:** proactive triggering, wider Core correlation and controlled automation require separately evaluated models, integrations and safety controls. These are opportunities for operator discovery, not capabilities exercised by this replay.')
     a,b=st.columns(2)
     with a:
         if st.button('▶ Follow the congestion case',key='ref_challenge_story',type='primary',use_container_width=True):
@@ -203,7 +208,7 @@ def architecture(st):
     cols=st.columns(3,gap='medium')
     for i,(name,description) in enumerate(tasks):
         with cols[i%3]:card(st,f'{i+1:02d}',name,description)
-    st.caption('ML predictors are tools invoked by SP01, not separate AI agents. The routes are conditional, not simultaneous.')
+    st.caption('ML predictors are tools invoked by SP01, not separate AI agents. The routes are conditional, not simultaneous. In the healthy control, the direct Supervisor chain closes the assessment without a separate recorded Supervisor LLM span.')
 
 
 def network(st,inventory,topology_fn):
@@ -233,6 +238,61 @@ def _case_banner(case):
             f' &nbsp; · &nbsp; <strong>{h(times["rca_label"])}:</strong> {h(times["rca_text"])}</div></div>')
 
 
+def complete_diagnosis_excerpt(value, target=335):
+    """Never cut a saved diagnosis mid-sentence or silently edit its meaning."""
+    text=str(value or '').strip()
+    if len(text)<=target:return text
+    sentences=re.split(r'(?<=[.!?])\s+',text)
+    chosen=[]
+    for sentence in sentences:
+        candidate=' '.join(chosen+[sentence])
+        if len(candidate)>target and chosen:break
+        if len(candidate)>target and not chosen:
+            # A single long statement is shown whole rather than misleadingly clipped.
+            return sentence
+        chosen.append(sentence)
+    return ' '.join(chosen) if chosen else text
+
+
+def investigation_opening(case, original_scene):
+    """Source-backed editorial overview, not a newly inferred diagnostic event."""
+    sid=case.get('scenario_id')
+    reviewed={
+      'M05I0003':('Accessibility deteriorated over successive recorded intervals across the three SITE_008 cells. The investigation needed to distinguish radio resource pressure from other radio, processing, transport and configuration explanations.',
+                   'Recorded 5G RAN accessibility measurements for SITE_008 and its three cells; inspect the original series in Evidence Room.'),
+      'M05I0005':('Several sites sharing CU_DOMAIN_01 showed a related accessibility degradation. The investigation examined whether shared CU processing or a boundary mechanism better explained the cross-site pattern.',
+                   'Recorded cross-site accessibility and CU-domain observations for SITE_001–SITE_005 / CU_DOMAIN_01.'),
+      'M05I0017':('The supplied 5G RAN observation window required a network health assessment. The recorded review did not establish a coherent material fault, so the direct review route was used.',
+                   'Recorded health-assessment inputs and network observations; no affected fault scope was established.'),
+    }
+    if sid in reviewed:return reviewed[sid]
+    # For other cases rely only on the saved scenario title; do not invent alarms,
+    # counters, threshold breaches, affected identities or onset timing.
+    name=str(case.get('title') or '5G RAN network condition')
+    return (f'The completed investigation examined the recorded 5G RAN observations associated with {name.lower()}. Follow how SP01 established the supported scope, selected a specialist route and contributed to the final evidence-grounded assessment.',
+            original_scene.get('evidence') or 'Original SP01 observations are available in the recorded source events.')
+
+
+def causal_interpretation(case):
+    """Keep original RCA intact; make confidence boundaries understandable."""
+    sid=case.get('scenario_id')
+    if sid=='M05I0003':
+        return ('Engineering interpretation: the saved measurements support increased radio resource pressure associated with the accessibility decline. Without explicit capacity/admission limits and detailed DRB failure causes, a claim of fully exhausted resources is not independently established by those measurements.')
+    if sid=='M05I0005':
+        return ('Engineering interpretation: the saved CU-CP observations support a processing-pressure association across the CU domain. The initiating trigger, applicable capacity limit and granular RRC failure mechanism remain unresolved in the visible evidence.')
+    return ''
+
+
+def evidence_focus(case):
+    """A case-specific chart target taken only from saved Supervisor object identity."""
+    su=(case.get('stage_data') or {}).get('supervisor_output') or {}
+    raw=su.get('target_cells') or []
+    target=next((t.get('nr_cell_cu_id') for t in raw if isinstance(t,dict) and t.get('nr_cell_cu_id')),None)
+    return {'scenario_id':case.get('scenario_id'),
+            'entity_id':target,
+            'metric':'partial_drb_accessibility_pct'}
+
+
 def story(st,case,beats):
     hero(st,'The case stories / Nine recorded investigations','Follow the diagnosis. Understand why the agents were needed.',
          'Five clear chapters explain the completed 5G RAN investigation, from observed symptoms to the saved RCA. Agent Flow provides the original handovers and technical records.')
@@ -242,9 +302,14 @@ def story(st,case,beats):
     e=(su.get('supporting_evidence') or [])[:2]
     uncertainty=(su.get('residual_uncertainty') or [])[:1]
     a,b,c=st.columns(3,gap='small')
-    with a:card(st,'01 / DIAGNOSIS','Recorded finding',str(diag)[:330])
+    with a:card(st,'01 / DIAGNOSIS','Recorded finding',complete_diagnosis_excerpt(diag))
     with b:card(st,'02 / SCOPE','Network impact',str(su.get('scope_class') or 'Not recorded')+' · '+', '.join((su.get('final_scope') or {}).get('affected_sites') or [])[:190])
-    with c:card(st,'03 / EVIDENCE GAP','What remains uncertain',str(uncertainty[0])[:330] if uncertainty else 'No residual uncertainty listed in the recorded final output.')
+    with c:card(st,'03 / EVIDENCE GAP','What remains uncertain',complete_diagnosis_excerpt(uncertainty[0]) if uncertainty else 'No residual uncertainty listed in the recorded final output.')
+    with st.expander('Full original Supervisor diagnosis and evidence interpretation',expanded=False):
+        st.write(diag)
+        interpretation=causal_interpretation(case)
+        if interpretation:st.info(interpretation)
+        st.caption('The recorded RCA and agent decisions remain unchanged; interpretation clarifies what the displayed measurements establish.')
     scenes=case_story_steps(case,beats)
     # Editorial titles retain each scene's source-backed findings, but put them
     # into a recognisable incident-investigation story arc.
@@ -262,12 +327,7 @@ def story(st,case,beats):
         scenes=[{**scene,'title':title} for scene,title in zip(scenes,titles)]
         # Describe the historical 5G RAN analysis positively and precisely;
         # do not repeatedly contrast every chapter with real-network operations.
-        scenes[0]['summary']=(
-            f"The completed 5G RAN investigation {case.get('scenario_id','—')} examined "
-            f"the network evidence for {case.get('title','the selected scenario')}. "
-            'The story begins with the original observations and follows the '
-            'recorded agents through scope assessment and their final conclusion.'
-        )
+        scenes[0]['summary'],scenes[0]['evidence']=investigation_opening(case,scenes[0])
     sid=case.get('scenario_id')
     key='ref_story_'+sid
     ix=max(0,min(int(st.session_state.get(key,0)),len(scenes)-1))
@@ -296,6 +356,14 @@ def story(st,case,beats):
         st.metric(times['rca_label'],times['rca_text'])
         st.caption('Localisation is the SP01 agent span; RCA is the full recorded investigation time. These clocks are not additive.')
     st.markdown('**Want to watch the real recorded agent handovers?** Open **Agent Flow**. The story chapters are interpretive, while Agent Flow presents the saved sequence and source events.')
+    focus=evidence_focus(case)
+    label=('Inspect the affected-cell accessibility evidence →' if focus['entity_id']
+           else 'Inspect recorded network measurements →')
+    if st.button(label,key='ref_story_measurements',use_container_width=True):
+        st.session_state['tead_evidence_focus']=focus
+        st.session_state['tc_evidence_view']='Network measurements & provenance'
+        st.session_state['requested_page']='Evidence Room'
+        st.rerun()
 
 
 def flow_steps(case,beats):
@@ -322,6 +390,12 @@ def _coord(index,count):
 def build_reference_flow_html(case,beats):
     """One E/C-like connected storyboard; only source-recorded agents and joins."""
     stages=flow_steps(case,beats)
+    chain_times={n.get('name'):n.get('duration_seconds') for n in case.get('observed_nodes',[])
+                 if n.get('run_type')=='chain' and n.get('depth')==1
+                 and isinstance(n.get('duration_seconds'),(int,float))}
+    for stage in stages:
+        duration=chain_times.get(stage['id'])
+        stage['recorded_duration']=format_duration(duration) if duration is not None else None
     nodes=[];edges=[]
     for i,s in enumerate(stages):
         x,y=_coord(i,len(stages))
@@ -349,7 +423,7 @@ def build_reference_flow_html(case,beats):
 <script id="replay-source" type="application/json">'''+data+'''</script>
 <div class="shell"><div class="toolbar"><div class="name" id="scenario">RECORDED NETWORK CASE</div><div class="buttons"><button id="prev">← Back</button><button id="play" class="primary">▶ Play</button><button id="next">Next →</button><button id="reset">↺ Reset</button><label for="speed" style="font-size:12px">Reading pace</label><select id="speed"><option value="quick" selected>Quick overview · 5s</option><option value="reading">Read · 15s</option><option value="manual">Manual · no timer</option></select></div></div>
 <div class="graphwrap"><div class="graph"><svg class="edges" viewBox="0 0 1000 265" preserveAspectRatio="none"><defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10Z" fill="#c9b5c3"/></marker></defs>'''+''.join(edges)+'''<path id="travel" class="travel" d=""/><circle id="orb" class="orb" r="10" cx="0" cy="0"/></svg>'''+''.join(nodes)+'''</div></div><div class="progress"><div class="fill" id="fill"></div></div>
-<div class="bottom"><div class="panel"><div class="kicker" id="stepcount">RECORDED STAGE</div><div class="out-title" id="out-title"></div><div class="out-line" id="out-line"></div><div class="evidence-note" id="evidence-note"></div></div><div class="panel"><div class="kicker">RECORDED HANDOVER HISTORY</div><div class="history" id="activity"></div></div></div>
+<div class="bottom"><div class="panel"><div class="kicker" id="stepcount">RECORDED STAGE</div><div class="out-title" id="out-title"></div><div class="stage-time" id="stage-runtime"></div><div class="out-line" id="out-line"></div><div class="evidence-note" id="evidence-note"></div></div><div class="panel"><div class="kicker">RECORDED HANDOVER HISTORY</div><div class="history" id="activity"></div></div></div>
 <div class="status"><span><b id="stepmeta"></b></span><span id="time-localisation"></span><span id="duration"></span><span>Current step: <b id="progress-meta"></b></span><span>Reader: <b id="playback-info"></b></span></div>
 <details class="inspector"><summary>Original recorded inputs, agent/tool events and evidence identifiers for current stage</summary><div id="source-events"></div></details>
 <div class="disclaimer">Recorded investigation playback · the speed selector controls reading time, not the original execution time. Source events and engineering details remain available above.</div></div></div>
@@ -367,6 +441,7 @@ $('orb').style.opacity=intake?'0':'1';
 $('scenario').textContent=data.id+' · '+data.title;
 $('stepcount').textContent=intake?'START / RECORDED NETWORK CONTEXT':'RECORDED STAGE '+(i+1)+' / '+stages.length;
 $('out-title').textContent=intake?'Before SP01 · '+data.intake.title:s.id+' · '+s.name;
+$('stage-runtime').textContent=intake?'Context only · no agent runtime':(s.recorded_duration?'Recorded '+s.id+' agent runtime: '+s.recorded_duration:'No separate agent runtime recorded for this join/report stage');
 $('out-line').textContent=s.activity||'Recorded activity; original events are available below.';
 $('evidence-note').textContent=s.finding||'No saved finding in this stage.';
 $('stepmeta').textContent=intake?'Before network localisation':'Stage '+(i+1)+' of '+stages.length;
@@ -420,7 +495,25 @@ def results_intro(st,cases=None):
             })
         st.dataframe(rows,use_container_width=True,hide_index=True)
         st.caption('SP01 is its recorded depth-one chain duration. RCA/review is the complete root trace elapsed time to the saved outcome; these durations overlap and must not be added together. Healthy controls do not have a fault localisation claim.')
+        with st.expander('Separate engineering experiment · CU evidence payload optimisation',expanded=False):
+            st.markdown('**Reported development result:** approximately **98.7% reduction in evidence-payload byte size** in a separate CU-domain packaging experiment. This is a data-representation result, not a measured token, inference-cost or latency reduction, and is not part of the nine-case timing comparison.')
+            st.caption('Review the original engineering evidence and measurement basis before using this result in an operator proposal.')
+
+
+def ui_build_id():
+    """Presentation-aware fingerprint; leaves RC2.2 source identity unchanged."""
+    from hashlib import sha256
+    root=Path(__file__).resolve().parent
+    paths=('app.py','ec_clarity_experience.py','ec_reference_experience.py',
+           'ec_reference_style.css','terminology.py')
+    digest=sha256()
+    for name in paths:
+        p=root/name
+        if not p.is_file():return 'source unavailable'
+        digest.update(name.encode('utf8')+b'\x00')
+        digest.update(p.read_bytes())
+    return digest.hexdigest()[:12]
 
 
 def footer(st):
-    st.markdown('''<div class="footer-note"><div class="footer-description"><div class="footer-heading">TEAD AI · AGENTIC TELECOM NETWORK INVESTIGATION</div><p>Explore original LangSmith-captured 5G RAN agent investigations, including their measurements, engineering reasoning and RCA results.</p></div><div class="release-tag"><div class="release-main"><span>UX REFERENCE</span><strong>E/C presentation baseline</strong></div><div class="release-trace">Independent preview · not a production release</div></div></div>''',unsafe_allow_html=True)
+    st.markdown(f'''<div class="footer-note"><div class="footer-description"><div class="footer-heading">TEAD AI · AGENTIC 5G RAN INVESTIGATION</div><p>Inspect completed multi-agent investigations, recorded telemetry and evidence-grounded RCA.</p></div><div class="release-tag"><div class="release-main"><span>TEAD AI DEMONSTRATION</span><strong>Interface Candidate 4.2</strong></div><div class="release-trace">UI build {h(ui_build_id())} · recorded investigation replay</div></div></div>''',unsafe_allow_html=True)
