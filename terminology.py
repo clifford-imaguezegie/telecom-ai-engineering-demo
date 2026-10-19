@@ -66,6 +66,19 @@ PAGE_KEY_TERMS = {
 }
 
 
+# Candidate 4.2: first-use terms for the accepted seven-workspace journey.
+# Legacy keys stay available for the original engineering UI and regression suite.
+_C42_VISITOR_PAGE_TERMS = {
+    'The Challenge': ('5G','RAN','RCA','ML'),
+    'Network Overview': ('5G','RAN','NR','CU','DU','PM'),
+    'Architecture': ('RAN','ML','CU','DU','RCA','LLM'),
+    'Case Stories': ('RCA','DRB','RRC','PM'),
+    'Agent Flow': ('ML','KPI','RCA','LLM'),
+    'Evidence Room': ('PM','DRB','RRC','5QI','CU-CP'),
+    'Results': ('RCA','ML','LLM','UTC'),
+}
+PAGE_KEY_TERMS.update(_C42_VISITOR_PAGE_TERMS)
+
 def expanded(term: str) -> str:
     """Standard first-use construction for a known technical abbreviation."""
     item = TERMS[term]
