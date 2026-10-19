@@ -85,7 +85,7 @@ def test_network_overview_topology_precedes_tools_and_selected_scenario_elsewher
     full='\n'.join(x[1] for x in seen)
     assert full.index('Recorded Network Topology') < full.index('Agent and Tool Capability Map')
     assert full.index('SITE_001') < full.index('Agent and Tool Capability Map')
-    assert 'Open **Scenario Library**' in full or 'open **Scenario Library**' in full
+    assert 'open **Case Stories**' in full and '**Agent Flow**' in full and '**Evidence Room**' in full
     assert 'Selected scenario / accessibility trend' not in full
 
 

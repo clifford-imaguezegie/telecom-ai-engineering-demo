@@ -69,7 +69,7 @@ def test_sidebar_navigation_and_programmatic_routing_signal_top_reset(monkeypatc
     mock.session_state['requested_page']='Platform Overview'
     render(mock,monkeypatch)
     assert len(calls)==2
-    assert mock.session_state['nav_page']=='Platform Overview'
+    assert mock.session_state['nav_page']=='The Challenge'
 
 
 def test_same_timestamp_missing_dimension_never_plotted():
