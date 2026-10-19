@@ -238,6 +238,23 @@ def _case_banner(case):
             f' &nbsp; · &nbsp; <strong>{h(times["rca_label"])}:</strong> {h(times["rca_text"])}</div></div>')
 
 
+def whole_word_excerpt(value):
+    """Trim an editorial truncation at the last word boundary, not mid-word."""
+    text=str(value or '')
+    if not text.endswith('…'):
+        return text
+    truncated=text[:-1].rstrip()
+    pos=truncated.rfind(' ')
+    return truncated[:pos].rstrip(' ,;:—')+'…' if pos>=len(truncated)//2 else text
+
+
+def format_stage_duration(seconds):
+    """Keep a saved subsecond span distinct from an actual zero."""
+    if seconds is None:
+        return None
+    return '<1s' if 0 <= seconds < 1 else format_duration(seconds)
+
+
 def complete_diagnosis_excerpt(value, target=335):
     """Never cut a saved diagnosis mid-sentence or silently edit its meaning."""
     text=str(value or '').strip()
@@ -311,6 +328,8 @@ def story(st,case,beats):
         if interpretation:st.info(interpretation)
         st.caption('The recorded RCA and agent decisions remain unchanged; interpretation clarifies what the displayed measurements establish.')
     scenes=case_story_steps(case,beats)
+    scenes=[{**s,'summary':whole_word_excerpt(s.get('summary')),
+             'evidence':whole_word_excerpt(s.get('evidence'))} for s in scenes]
     # Editorial titles retain each scene's source-backed findings, but put them
     # into a recognisable incident-investigation story arc.
     if len(scenes)==5:
@@ -376,6 +395,12 @@ def flow_steps(case,beats):
     if target and ids!=target:
         # Never construct a narrative from an assumed branch if source order differs.
         raise ValueError(f'Saved stage sequence does not match {case.get("route_family")}: {ids}')
+    for stage in stages:
+        for field in ('question','activity','finding'):
+            stage[field]=whole_word_excerpt(stage.get(field))
+        for event in stage.get('events') or []:
+            for field in ('input','action','output'):
+                event[field]=whole_word_excerpt(event.get(field))
     return stages
 
 
@@ -395,7 +420,7 @@ def build_reference_flow_html(case,beats):
                  and isinstance(n.get('duration_seconds'),(int,float))}
     for stage in stages:
         duration=chain_times.get(stage['id'])
-        stage['recorded_duration']=format_duration(duration) if duration is not None else None
+        stage['recorded_duration']=format_stage_duration(duration)
     nodes=[];edges=[]
     for i,s in enumerate(stages):
         x,y=_coord(i,len(stages))
@@ -433,6 +458,7 @@ const pace={quick:5000,reading:15000,manual:0};
 function point(id){const p=points[id];return [p[0]*10,p[1]*2.65]}
 function stop(){playing=false;clearTimeout(timer);timer=null;cancelAnimationFrame(frame);$('play').textContent='▶ Play'}
 function animate(from,to){const [x0,y0]=point(from),[x1,y1]=point(to);const path=$('travel'),orb=$('orb');const d=`M ${x0} ${y0} L ${x1} ${y1}`;path.setAttribute('d',d);if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){orb.setAttribute('cx',x1);orb.setAttribute('cy',y1);path.setAttribute('d','');return}const length=path.getTotalLength(),begin=performance.now();function tick(now){const f=Math.min(1,(now-begin)/500);const pt=path.getPointAtLength(f*length);orb.setAttribute('cx',pt.x);orb.setAttribute('cy',pt.y);if(f<1)frame=requestAnimationFrame(tick);else path.setAttribute('d','')}frame=requestAnimationFrame(tick)}
+function shortText(value,limit){const txt=String(value||'');if(txt.length<=limit)return txt;const cut=txt.slice(0,limit),idx=cut.lastIndexOf(' ');return (idx>limit/2?cut.slice(0,idx):cut).trimEnd()+'…'}
 function render(){
 const intake=i<0;
 const s=intake?{id:'INTAKE',name:data.intake.title,role:'context',activity:data.intake.activity,finding:data.intake.finding,events:[]}:stages[i];
@@ -441,7 +467,7 @@ $('orb').style.opacity=intake?'0':'1';
 $('scenario').textContent=data.id+' · '+data.title;
 $('stepcount').textContent=intake?'START / RECORDED NETWORK CONTEXT':'RECORDED STAGE '+(i+1)+' / '+stages.length;
 $('out-title').textContent=intake?'Before SP01 · '+data.intake.title:s.id+' · '+s.name;
-$('stage-runtime').textContent=intake?'Context only · no agent runtime':(s.recorded_duration?'Recorded '+s.id+' agent runtime: '+s.recorded_duration:'No separate agent runtime recorded for this join/report stage');
+$('stage-runtime').textContent=intake?'Context only · no executed agent runtime':(s.recorded_duration?'Recorded '+s.id+(s.role==='agent'?' agent runtime: ':' stage runtime: ')+s.recorded_duration:'No separate runtime recorded for this join/report stage');
 $('out-line').textContent=s.activity||'Recorded activity; original events are available below.';
 $('evidence-note').textContent=s.finding||'No saved finding in this stage.';
 $('stepmeta').textContent=intake?'Before network localisation':'Stage '+(i+1)+' of '+stages.length;
@@ -452,7 +478,7 @@ $('fill').style.width=(intake?0:(i+1)/stages.length*100)+'%';
 $('prev').disabled=i===-1;$('next').disabled=i===stages.length-1;
 $('playback-info').textContent=$('speed').value==='manual'?'Manual stepping':(playing?'Playing':'Ready')+' · '+pace[$('speed').value]/1000+'s/step';
 const recent=intake?[{id:'START',name:'Investigation intake',finding:'Network context presented before localisation'}]:stages.slice(Math.max(0,i-3),i+1);
-$('activity').replaceChildren(...recent.map(x=>{const d=document.createElement('div');d.textContent=x.id+' · '+x.name+' — '+(x.finding||'source event recorded').slice(0,155);return d}));
+$('activity').replaceChildren(...recent.map(x=>{const d=document.createElement('div');d.textContent=x.id+' · '+x.name+' — '+shortText(x.finding||'source event recorded',155);return d}));
 const host=$('source-events');host.replaceChildren(...s.events.map((e,n)=>{const d=document.createElement('div');d.className='inspector-item';d.textContent=(n+1)+'. '+e.title+'\\nINPUT: '+e.input+'\\nACTION: '+e.action+'\\nOUTPUT: '+e.output+'\\nSOURCE: '+e.source+(e.evidence_id?'\\nEVIDENCE ID: '+e.evidence_id:'')+(e.timestamp?'\\nRECORDED START: '+e.timestamp:'');return d}));
 if(intake){const d=document.createElement('div');d.className='inspector-item';d.textContent='Opening context is a presentation stage, not an additional agent or recorded execution span.'+(data.intake.observation_window?'\\nRecorded observation window: '+data.intake.observation_window:'');host.replaceChildren(d)}
 if(!intake){animate(last,s.id);last=s.id}
@@ -505,7 +531,7 @@ def ui_build_id():
     from hashlib import sha256
     root=Path(__file__).resolve().parent
     paths=('app.py','ec_clarity_experience.py','ec_reference_experience.py',
-           'ec_reference_style.css','terminology.py')
+           'ec_reference_style.css','terminology.py','storyboard.py')
     digest=sha256()
     for name in paths:
         p=root/name

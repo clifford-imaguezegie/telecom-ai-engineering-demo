@@ -1686,9 +1686,15 @@ _valid_scenarios=manifest['scenario_order']
 _default_scenario='M05I0003'
 
 def sync_scenario_from(widget_key):
+    # One canonical scenario. This callback executes before Streamlit redraws widgets.
     candidate=st.session_state.get(widget_key)
     if candidate in _valid_scenarios:
+        previous=st.session_state.get('selected_scenario')
         st.session_state['selected_scenario']=candidate
+        if candidate!=previous:
+            st.session_state.pop('tead_evidence_focus',None)
+            for scenario in _valid_scenarios:
+                st.session_state.pop('ref_story_'+scenario,None)
 
 def sync_scenario_picker(widget_key):
     # Set widget values before drawing them, using the persistent scenario ID.
@@ -1745,7 +1751,7 @@ if page in WORKSPACES:
   st.session_state['ref_nav_choice']=page
  st.radio('Explore',WORKSPACES,horizontal=True,key='ref_nav_choice',on_change=_ref_nav_changed)
 
-if page not in ('Guided Operations Demo','Platform Overview','The Challenge','Architecture','Case Stories','Agent Flow','Evidence Room','Results'):
+if page not in ('Guided Operations Demo','Platform Overview','The Challenge','Network Overview','Architecture','Case Stories','Agent Flow','Evidence Room','Results'):
  st.markdown(f'''<div class="hero"><div class="eyebrow">TEAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TEAD AI — Agentic Telecom Network Investigation &amp; Root Cause Analysis</h1><div class="sub">Machine Learning (ML)-assisted network assessment · Multi-agent engineering investigation · Evidence-grounded RCA</div></div>''',unsafe_allow_html=True)
 
 if page!='Guided Operations Demo':
@@ -1779,18 +1785,26 @@ elif page=='Architecture':
   architecture_diagram()
 
 elif page=='Case Stories':
+ # Reconcile persistent widget state before drawing the page selector.
+ sync_scenario_picker('ref_case_stories')
  ref_choice=st.selectbox('Choose a recorded network investigation',options=_valid_scenarios,
-           format_func=lambda v:opts[v],index=_valid_scenarios.index(sid),key='ref_case_stories')
+           format_func=lambda v:opts[v],index=_valid_scenarios.index(sid),
+           key='ref_case_stories',on_change=sync_scenario_from,args=('ref_case_stories',))
  if ref_choice!=sid:
+  # Retain compatibility with offline widget stubs that do not fire callbacks.
   st.session_state['selected_scenario']=ref_choice
+  st.session_state.pop('tead_evidence_focus',None)
   sid=ref_choice;c=load_case(sid)
  ref.story(st,c,load_storyboard(sid))
 
 elif page=='Agent Flow':
+ sync_scenario_picker('ref_agent_flow')
  ref_choice=st.selectbox('Choose a recorded network investigation',options=_valid_scenarios,
-           format_func=lambda v:opts[v],index=_valid_scenarios.index(sid),key='ref_agent_flow')
+           format_func=lambda v:opts[v],index=_valid_scenarios.index(sid),
+           key='ref_agent_flow',on_change=sync_scenario_from,args=('ref_agent_flow',))
  if ref_choice!=sid:
   st.session_state['selected_scenario']=ref_choice
+  st.session_state.pop('tead_evidence_focus',None)
   sid=ref_choice;c=load_case(sid)
  ref.agent_flow(st,c,load_storyboard(sid),embed_workflow_html)
 

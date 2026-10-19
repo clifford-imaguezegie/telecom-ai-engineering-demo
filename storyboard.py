@@ -184,10 +184,15 @@ def build_story(c, evidence_loader):
                 summary_text(assess.get('summary') or outcome.get('brief_update') or assess.get('supporting_observations') or d.get('positive_metrics'),700),i,f'{agent} assessment_feedback / assessment_outcome (recorded)')
         elif key=='supervisor_observe_1':
             join={'LOCAL_SPECIALISTS':'LOCAL_JOIN','CU_SPECIALIST':'CU_JOIN','DIRECT_SUPERVISOR':'DIRECT_JOIN'}.get(c['route_family'],'DIRECT_JOIN')
-            add(join,'join','Specialist handover reaches correlation join',
-                'Recorded SP01 and specialist findings, where applicable',
-                'Collect the branch results for Supervisor synthesis.',
-                f"Recorded graph route uses {join}. Local specialist chain spans ran sequentially in this recorded experiment.",i,'Recorded LangGraph route')
+            join_note={
+                'LOCAL_JOIN':'SP02–SP07 specialist chains ran sequentially and were consolidated for Supervisor review.',
+                'CU_JOIN':'SP08 CU-domain findings were consolidated for Supervisor review; the cell/site specialist path did not execute.',
+                'DIRECT_JOIN':'SP01 network-health assessment passed directly to Supervisor completion; no domain specialists executed.',
+            }[join]
+            add(join,'join','Recorded branch reaches findings consolidation',
+                'Recorded SP01 and applicable specialist findings',
+                'Collect the recorded branch results for Supervisor review.',
+                f'Recorded graph route uses {join}. {join_note}',i,'Recorded LangGraph route')
             add('SUPERVISOR','review','Supervisor reviews incident and hypotheses',
                 'SP01 findings, domain-specialist reports and contradictions',
                 'Review affected scope, competing fault hypotheses, and gaps in the existing evidence.',
