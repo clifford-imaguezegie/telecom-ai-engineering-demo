@@ -18,6 +18,7 @@ from value_solutions import render_page as render_value_solutions_page
 from measurement_series import partition_measurements
 from release_identity import release_build_id, RELEASE_VERSION, RELEASE_DATE
 from terminology import render_page_terms, render_sidebar_glossary
+from connected_agent_experience import connected_agent_html, agent_context_html, CONNECTED_CSS
 from observatory_experience import OBSERVATORY_CSS, render_observatory_home
 from pathlib import Path
 from datetime import datetime
@@ -34,7 +35,7 @@ BASE = Path(__file__).resolve().parent
 DATA = BASE / 'data'
 PAGES = ['Platform Overview','Value Proposition & Solutions','Guided Operations Demo','Network Overview','Scenario Library','Agentic Replay','Root Cause Analysis','Engineering Evidence','Evaluation & Performance']
 
-st.set_page_config(page_title='TEAD AI | Network Observatory',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
+st.set_page_config(page_title='TEAD AI | Network Investigation & RCA',page_icon='📡',layout='wide',initial_sidebar_state='expanded')
 st.markdown('''<style>
 .block-container {padding-top:1.5rem;padding-bottom:3rem;max-width:1500px}
 [data-testid="stSidebar"]{background:#101e30}
@@ -406,6 +407,7 @@ h1,h2,h3{letter-spacing:-.025em}
 
 # Presentation-only layer; all recorded evidence and model logic remain unchanged.
 st.markdown(OBSERVATORY_CSS,unsafe_allow_html=True)
+st.markdown(CONNECTED_CSS,unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False)
 def load_manifest():
@@ -914,12 +916,13 @@ def cinematic_replay(sid):
  beats=load_storyboard(sid)
  key='cinema_'+sid
  if key not in st.session_state:
-  st.session_state[key]={'index':0,'playing':False,'seconds':3,'last_tick':time.monotonic()}
+  st.session_state[key]={'index':0,'playing':False,'seconds':16,'last_tick':time.monotonic()}
  player=st.session_state[key]
  last=len(beats)-1
  seek_key='cinema_seek_'+sid
  if seek_key not in st.session_state:st.session_state[seek_key]=player['index']
  now=time.monotonic()
+ if player['seconds']==0:player['playing']=False  # Manual step mode
  if player['playing'] and now-player['last_tick']>=player['seconds']:
   _set_playhead(player,seek_key,player['index']+1,last)
   player['last_tick']=now
@@ -927,7 +930,7 @@ def cinematic_replay(sid):
 
  ctrl=st.columns([1.25,.9,.85,.85,1.6])
  with ctrl[0]:
-  if st.button('⏸ Pause' if player['playing'] else '▶ Play',type='primary',use_container_width=True,key='cinema_play_'+sid):
+  if st.button('⏸ Pause' if player['playing'] else '▶ Play',type='primary',use_container_width=True,key='cinema_play_'+sid,disabled=player['seconds']==0):
    if not player['playing'] and player['index']==last:_set_playhead(player,seek_key,0,last)
    player['playing']=not player['playing']; player['last_tick']=time.monotonic()
    st.rerun(scope='fragment')
@@ -941,19 +944,42 @@ def cinematic_replay(sid):
   if st.button('↺ Restart',use_container_width=True,key='cinema_restart_'+sid):
    _set_playhead(player,seek_key,0,last);player['playing']=False;player['last_tick']=time.monotonic();st.rerun(scope='fragment')
  with ctrl[4]:
-  speed=st.selectbox('Pacing per beat',[2,3,5,8],index=[2,3,5,8].index(player['seconds']),format_func=lambda v:f'{v} seconds',label_visibility='collapsed',key='cinema_speed_'+sid)
+  pace_options=[8,16,30,60,120,0]
+  speed=st.selectbox('Reading pace',pace_options,
+                     index=pace_options.index(player['seconds']) if player['seconds'] in pace_options else 1,
+                     format_func=lambda v:'Manual · Back / Next' if v==0 else f'{v}s to read each recorded event',
+                     key='cinema_speed_'+sid)
   if speed!=player['seconds']:
    player['seconds']=speed;player['last_tick']=time.monotonic()
+   if speed==0:player['playing']=False
 
  st.slider('Presentation timeline',min_value=0,max_value=last,format='%d',key=seek_key,
            on_change=_seek_from_widget,args=(key,seek_key,last))
  idx=player['index']
  beat=beats[idx]
  st.progress((idx+1)/len(beats),text=f'PLAYBACK {idx+1} / {len(beats)}  •  {"PLAYING" if player["playing"] else "PAUSED"}  •  {agent_label(beat["agent"])}')
- embed_workflow_html(workflow_svg(c['route_family'],beats,idx),height=250,scrolling=False)
+ # The route remains unknown until the original SP01 routing result appears.
+ route_known=any(b['agent']=='SP01' and b['kind'] in ('decision','handover') for b in beats[:idx+1])
+ previously_seen=[b['agent'] for b in beats[:idx+1]]
+ st.markdown(connected_agent_html(c,beat['agent'],previously_seen,route_unlocked=route_known,
+             mode='Recorded event',position_label=f'Event {idx+1}/{len(beats)}'),unsafe_allow_html=True)
+ # A nearby control row stays accessible while the visitor reads the active agent.
+ rback,rnext,rpause=st.columns(3)
+ with rback:
+  if st.button('◀ Previous event',key='cinema_readback_'+sid,disabled=idx==0,use_container_width=True):
+   player['playing']=False;_set_playhead(player,seek_key,idx-1,last);st.rerun(scope='fragment')
+ with rnext:
+  if st.button('Next recorded event ▶',key='cinema_readnext_'+sid,disabled=idx==last,use_container_width=True):
+   player['playing']=False;_set_playhead(player,seek_key,idx+1,last);st.rerun(scope='fragment')
+ with rpause:
+  if st.button('⏸ Pause reading',key='cinema_readpause_'+sid,disabled=not player['playing'],use_container_width=True):
+   player['playing']=False;st.rerun(scope='fragment')
  with st.expander('View complete recorded agent route',expanded=False):
   st.html(workflow_overview_html(beats,idx))
- st.markdown(f'#### {idx+1:02d} — {beat["title"]}')
+  embed_workflow_html(workflow_svg(c['route_family'],beats,idx),height=250,scrolling=False)
+ st.markdown(f'#### Recorded event {idx+1:02d} — {beat["title"]}')
+ st.markdown(agent_context_html(beat,beats[idx+1] if idx<last else None,
+                             heading='Active event · original recorded output'),unsafe_allow_html=True)
  panels=st.columns([1,1,1.12])
  with panels[0]:
   st.markdown('**📥 INPUT / HANDOVER**')
@@ -1129,7 +1155,7 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
         return
     key='ops_player_'+selected_sid+'_'+str(include_healthy)+('_executive' if executive else '')
     if key not in st.session_state:
-        st.session_state[key]={'index':0,'playing':False,'seconds':6 if executive else 7,
+        st.session_state[key]={'index':0,'playing':False,'seconds':18 if executive else 22,
                                'last_tick':time.monotonic(),'carry':0.,
                                'presentation_elapsed':0.,'started':False}
     play=st.session_state[key]
@@ -1150,6 +1176,7 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
     if play['playing'] and boundary_index is not None and play['index']==boundary_index:
         play['playing']=False
         play['carry']=0.
+    if play.get('seconds')==0:play['playing']=False  # Manual step mode
     if play['playing']:
         play['started']=True
         dt=max(0.,min(now-play['last_tick'],3.))
@@ -1180,7 +1207,7 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
     with controls[0]:
         if st.button('✓ Completed · Restart to replay' if play.get('started') and play['index']==last else
                      '⏸ Pause' if play['playing'] else '▶ Play',type='primary',
-                     disabled=play.get('started') and play['index']==last,
+                     disabled=(play.get('started') and play['index']==last) or play['seconds']==0,
                      use_container_width=True,key=key+'_play'):
             if boundary_index is not None and play['index']==boundary_index and play.get('started'):
                 play['playing']=False
@@ -1215,13 +1242,14 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
             # left the old completed widgets mounted in live Cloud sessions.
             st.rerun()
     with controls[4]:
-        speeds=[4,5,6,7,8] if executive else [3,5,7,10,14]
-        speed=st.selectbox('Playback pacing',speeds,
+        speeds=[8,12,18,30,60,120,0] if executive else [10,15,22,40,75,120,0]
+        speed=st.selectbox('Reading pace',speeds,
                            index=speeds.index(play['seconds']) if play['seconds'] in speeds else 2,
-                           format_func=lambda x:f'{x}s per recorded scene',
-                           label_visibility='collapsed',key=key+'_pace')
+                           format_func=lambda x:'Manual · Back / Next' if x==0 else f'{x}s to read a scene',
+                           key=key+'_pace')
         if speed!=play['seconds']:
             play['seconds']=speed
+            if speed==0:play['playing']=False
             play['carry']=0.
 
     # Preserved seek callback and stage inspector; collapsed to remove visual competition.
@@ -1290,17 +1318,50 @@ def guided_operations_player(selected_sid, include_healthy, executive=False):
         '<div class="gs-timeline-fill" style="width:'+str(scene_pct)+'%"></div></div>'
         '<div class="gs-timeline-note">Scene progress and watch time are presentation indicators; original trace time comes from recorded timestamps.</div>'
         '</section>',unsafe_allow_html=True)
-    # Keep the result that just changed immediately beneath the status and
-    # progress. For specialists and Supervisor, never bury the finding below
-    # the full workflow; SP01 retains flow-first onboarding.
-    prominent_results=(not ready and beat['agent']!='SP01')
-    if prominent_results:
-        st.markdown(board_html(item,timeline,idx,ready=ready),unsafe_allow_html=True)
-        st.markdown(flow_html(item,timeline[:idx+1],ready=False),unsafe_allow_html=True)
-    else:
-        st.markdown(flow_html(item,timeline[:idx+1] if not ready else [],ready=ready),unsafe_allow_html=True)
-        st.markdown(board_html(item,timeline,idx,ready=ready),unsafe_allow_html=True)
+    # Shared connected-agent map: do not reveal the route before SP01's
+    # original saved decision/handover, and never join two independent traces.
+    same_case_history=[x['beat'] for x in timeline[:idx+1]
+                       if x['scenario_id']==sid] if not ready else []
+    known_route=not ready and any(b['agent']=='SP01' and
+        b['kind'] in ('decision','handover') for b in same_case_history)
+    st.markdown(connected_agent_html(case,beat['agent'],
+            [b['agent'] for b in same_case_history],route_unlocked=known_route,
+            ready=ready,mode='Guided scene',
+            position_label='Ready' if ready else f'Scene {this_case_index+1}/{len(case_positions)}'),
+            unsafe_allow_html=True)
+    # Reading controls immediately adjacent to the agent map.
+    rback,rnext,rpause=st.columns(3)
+    with rback:
+        if st.button('◀ Previous scene',disabled=ready or idx==0,
+                     use_container_width=True,key=key+'_readback'):
+            play['playing']=False
+            _set_playhead(play,seek_key,idx-1,last)
+            play['carry']=0.;st.rerun(scope='fragment')
+    with rnext:
+        if st.button('Next recorded scene ▶',
+                     disabled=(not ready and (idx==last or
+                         (boundary_index is not None and idx==boundary_index))),
+                     use_container_width=True,key=key+'_readnext'):
+            play['playing']=False
+            if not play.get('started'):
+                play['started']=True
+            elif boundary_index is None or play['index']!=boundary_index:
+                _set_playhead(play,seek_key,idx+1,last)
+            play['carry']=0.;st.rerun(scope='fragment')
+    with rpause:
+        if st.button('⏸ Pause reading',disabled=not play['playing'],
+                     use_container_width=True,key=key+'_readpause'):
+            play['playing']=False;play['carry']=0.;st.rerun(scope='fragment')
+    # Preserve the original progressively revealed evidence and exact findings.
+    st.markdown(board_html(item,timeline,idx,ready=ready),unsafe_allow_html=True)
+    if not ready:
+        next_in_case=next((x['beat'] for x in timeline[idx+1:]
+                           if x['scenario_id']==sid),None)
+        st.markdown(agent_context_html(beat,next_in_case,
+                      heading='Current scene · original recorded evidence'),unsafe_allow_html=True)
     st.markdown(focus_html(item,idx+1,len(timeline),ready=ready),unsafe_allow_html=True)
+    with st.expander('Original compact routing diagram',expanded=False):
+        st.markdown(flow_html(item,timeline[:idx+1] if not ready else [],ready=ready),unsafe_allow_html=True)
 
     at_boundary=boundary_index is not None and idx==boundary_index and play.get('started')
     if at_boundary:
@@ -1409,8 +1470,8 @@ def sync_scenario_picker(widget_key):
     if st.session_state.get(widget_key)!=canonical:
         st.session_state[widget_key]=canonical
 
-st.sidebar.markdown('### ◈ TEAD AI / OBSERVATORY')
-st.sidebar.caption('Network Observatory · UX preview; experimental evidence unchanged')
+st.sidebar.markdown('### ◈ TEAD AI')
+st.sidebar.caption('Agentic Network Investigation & RCA · Connected Agent UX preview')
 st.sidebar.caption('Agentic Telecom Network Investigation & Root Cause Analysis (RCA)')
 st.sidebar.caption(f'{RELEASE_VERSION} · build {release_build_id()} · {RELEASE_DATE}')
 st.sidebar.divider()
@@ -1439,7 +1500,7 @@ st.sidebar.caption('No live agents, telemetry, Large Language Model (LLM) calls,
 st.sidebar.caption('Synthetic experimental network • not production operations')
 
 if page not in ('Guided Operations Demo','Platform Overview'):
- st.markdown(f'''<div class="hero"><div class="eyebrow">TEAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TEAD AI — Network Investigation Observatory</h1><div class="sub">Machine Learning (ML)-assisted network assessment · Multi-agent engineering investigation · Evidence-grounded RCA</div></div>''',unsafe_allow_html=True)
+ st.markdown(f'''<div class="hero"><div class="eyebrow">TEAD AI · TELECOM ENGINEERING INTELLIGENCE</div><h1>TEAD AI — Agentic Telecom Network Investigation &amp; Root Cause Analysis</h1><div class="sub">Machine Learning (ML)-assisted network assessment · Multi-agent engineering investigation · Evidence-grounded RCA</div></div>''',unsafe_allow_html=True)
 
 if page!='Guided Operations Demo':
  render_page_terms(st,page)
@@ -1469,10 +1530,11 @@ if page=='Platform Overview':
   render_solution_intro(intro_cases,include_architecture=False)
   render_investigation_flow()
   render_execution_performance(intro_cases)
- with st.expander('Engineering learnings, full architecture and limitations',expanded=False):
+ with st.expander('Detailed Architecture — original technical explanation (preserved)',expanded=False):
+  architecture_diagram()
+ with st.expander('Engineering learnings, value and limitations',expanded=False):
   render_platform_learnings()
   render_engineering_learnings()
-  architecture_diagram()
   render_value_proposition()
   st.caption('Future development: live adapters, operational resilience, measured inference economics, evidence sufficiency and policy-bounded actions require separate testing before production claims.')
 

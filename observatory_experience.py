@@ -28,6 +28,8 @@ OBSERVATORY_CSS = r"""<style>
 [data-testid="stButton"] button[kind="primary"]{background:#3557e9!important;color:#fff!important;border:1px solid #3557e9!important;border-radius:11px!important}
 [data-testid="stButton"] button[kind="primary"]:hover{background:#213fb9!important}
 [data-testid="stButton"] button{border-radius:11px!important}
+.hero:has(> .ob-root > .ob-hero){background:transparent!important;border:0!important;padding:0!important;box-shadow:none!important;margin:0!important}
+.ob-product-name{font-size:.86rem;line-height:1.4;letter-spacing:.02em;color:#dce9ff;font-weight:740;margin:9px 0 0}
 .ob-root{font-family:inherit;color:var(--ob-ink)}
 .ob-root *{box-sizing:border-box}
 .ob-hero{position:relative;overflow:hidden;border-radius:23px;background:radial-gradient(circle at 86% 15%,rgba(80,106,249,.50),transparent 34%),linear-gradient(125deg,#0c1630 0%,#172956 64%,#1a367e 100%);padding:clamp(24px,3.6vw,52px);color:#fff;border:1px solid #2f4990;min-height:280px;box-shadow:0 20px 45px rgba(12,22,48,.17)}
@@ -74,15 +76,21 @@ def render_observatory_home(st, cases):
     total = len(cases)
     incidents = sum(bool(c.get('derived_display', {}).get('incident_present')) for c in cases)
     healthy = total - incidents
-    st.markdown('''<div class="ob-root"><section class="ob-hero">
-      <div class="ob-eyebrow"><span class="ob-dot"></span> TEAD AI / NETWORK OBSERVATORY</div>
+    st.markdown('''<div class="hero"><div class="ob-root"><section class="ob-hero">
+      <div class="ob-eyebrow"><span class="ob-dot"></span> TEAD AI / NETWORK INVESTIGATION &amp; RCA</div>
+      <div class="ob-product-name">TEAD AI — Agentic Telecom Network Investigation &amp; Root Cause Analysis</div>
       <h1>Network incidents are complex.<br><em>The diagnosis should be clear.</em></h1>
       <div class="ob-lead">When 5G performance degrades, engineers must bring together symptoms, events,
       radio conditions, network resources and specialist knowledge. TEAD AI explores how
       machine-learning-assisted localisation and coordinated AI agents can produce
       a traceable Root Cause Analysis (RCA) for engineering review.</div>
       <div class="ob-hero-foot"><span>Recorded agent investigations</span><span>Evidence-led analysis</span><span>No network actions executed</span></div>
-    </section></div>''', unsafe_allow_html=True)
+    </section></div></div>''', unsafe_allow_html=True)
+    if st.button('▶ Watch a recorded network investigation',type='primary',use_container_width=True,key='tead_hero_watch'):
+        st.session_state['selected_scenario']='M05I0003'
+        st.session_state['requested_page']='Guided Operations Demo'
+        st.rerun()
+    st.caption('Start with a representative recorded congestion investigation. Other recorded cases are selectable in the sidebar.')
     st.markdown('''<div class="ob-root"><div class="ob-section"><div class="ob-kicker">01 / THE OPERATIONAL CHALLENGE</div>
       <h2>Getting from an alarm to a defensible diagnosis takes work.</h2>
       <p class="ob-intro">A network problem can span multiple domains. The difficult part is correlating observations,
